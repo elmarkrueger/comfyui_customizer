@@ -3,7 +3,12 @@ import { createApp } from "vue";
 
 import ThemeControlPanel from "./components/ThemeControlPanel.vue";
 import { applyThemeNow } from "./modules/css-style-injector";
-import { DEFAULT_THEME_PANEL_STATE, deserializeThemeState } from "./modules/state-sync";
+import {
+    DEFAULT_THEME_PANEL_STATE,
+    deserializeThemeState,
+    sanitizeThemeState,
+    type ThemePanelState,
+} from "./modules/state-sync";
 
 const MIN_W = 430;
 const MIN_H = 720;
@@ -48,6 +53,69 @@ function isolateContainerEvents(container: HTMLDivElement): void {
   });
 }
 
+function collectRuntimeSlotColorMaps(): Array<Record<string, string>> {
+  const appAny = comfyApp as any;
+  const globalAny = globalThis as any;
+  const candidates: unknown[] = [
+    appAny?.canvas?.default_connection_color_byType,
+    appAny?.canvas?.default_connection_color_byTypeOff,
+    globalAny?.app?.canvas?.default_connection_color_byType,
+    globalAny?.app?.canvas?.default_connection_color_byTypeOff,
+    globalAny?.comfyAPI?.app?.app?.canvas?.default_connection_color_byType,
+    globalAny?.comfyAPI?.app?.app?.canvas?.default_connection_color_byTypeOff,
+  ];
+
+  const unique = new Set<Record<string, string>>();
+  const maps: Array<Record<string, string>> = [];
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+      continue;
+    }
+
+    const map = candidate as Record<string, string>;
+    if (!unique.has(map)) {
+      unique.add(map);
+      maps.push(map);
+    }
+  }
+
+  return maps;
+}
+
+function requestCanvasRedraw(): void {
+  const appAny = comfyApp as any;
+  comfyApp.graph?.setDirtyCanvas?.(true, true);
+  appAny?.canvas?.graph?.setDirtyCanvas?.(true, true);
+  appAny?.canvas?.setDirty?.(true, true);
+  appAny?.canvas?.draw?.(true, true);
+}
+
+function applyRuntimeSlotColors(state: ThemePanelState): void {
+  const normalized = sanitizeThemeState(state);
+  const maps = collectRuntimeSlotColorMaps();
+  if (!maps.length) {
+    return;
+  }
+
+  for (const map of maps) {
+    for (const [slotType, color] of Object.entries(normalized.nodeSlot)) {
+      const lowerSlotType = slotType.toLowerCase();
+      const hasUpper = slotType in map;
+      const hasLower = lowerSlotType in map;
+
+      if (hasUpper || !hasLower) {
+        map[slotType] = color;
+      }
+
+      if (hasLower) {
+        map[lowerSlotType] = color;
+      }
+    }
+  }
+
+  requestCanvasRedraw();
+}
+
 comfyApp.registerExtension({
   name: "Duffy.ThemeControlPanel.Vue",
 
@@ -71,6 +139,7 @@ comfyApp.registerExtension({
         ? deserializeThemeState(stateWidget.value)
         : { ...DEFAULT_THEME_PANEL_STATE };
     applyThemeNow(initialState);
+    applyRuntimeSlotColors(initialState);
 
     const container = document.createElement("div");
     container.style.cssText = "width:100%; height:100%; box-sizing:border-box; overflow:hidden;";
@@ -78,11 +147,14 @@ comfyApp.registerExtension({
 
     const vueApp = createApp(ThemeControlPanel, {
       onChange: (json: string) => {
+        const nextState = deserializeThemeState(json);
+        applyThemeNow(nextState);
+        applyRuntimeSlotColors(nextState);
+
         if (stateWidget) {
           stateWidget.value = json;
         }
 
-        comfyApp.graph?.setDirtyCanvas?.(true, false);
         node.setDirtyCanvas?.(true, true);
       },
     });
@@ -102,7 +174,9 @@ comfyApp.registerExtension({
         return;
       }
 
-      applyThemeNow(deserializeThemeState(value));
+      const hydratedState = deserializeThemeState(value);
+      applyThemeNow(hydratedState);
+      applyRuntimeSlotColors(hydratedState);
       instance.deserialise?.(value);
     };
 

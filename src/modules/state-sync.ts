@@ -22,6 +22,8 @@ export interface ThemeUiMeta {
   contentTextColor: string;
   titleTextColor: string;
   ioTextColor: string;
+  ioTextSize: number;
+  slotPointSize: number;
   bgColor: string;
   titleBgColor: string;
   outlineColor: string;
@@ -145,6 +147,8 @@ export const DEFAULT_THEME_UI_META: ThemeUiMeta = {
   contentTextColor: "#d9d9d9",
   titleTextColor: "#d9d9d9",
   ioTextColor: "#d9d9d9",
+  ioTextSize: 13,
+  slotPointSize: 12,
   bgColor: "#242424",
   titleBgColor: "#2f2f2f",
   outlineColor: "#00d18f",
@@ -402,6 +406,8 @@ function sanitizeUiMeta(value: unknown): ThemeUiMeta {
     contentTextColor: sanitizeColor(source.contentTextColor, DEFAULT_THEME_UI_META.contentTextColor),
     titleTextColor: sanitizeColor(source.titleTextColor, DEFAULT_THEME_UI_META.titleTextColor),
     ioTextColor: sanitizeColor(source.ioTextColor, DEFAULT_THEME_UI_META.ioTextColor),
+    ioTextSize: clampInt(source.ioTextSize, 8, 40, DEFAULT_THEME_UI_META.ioTextSize),
+    slotPointSize: clampInt(source.slotPointSize, 6, 26, DEFAULT_THEME_UI_META.slotPointSize),
     bgColor: sanitizeColor(source.bgColor, DEFAULT_THEME_UI_META.bgColor),
     titleBgColor: sanitizeColor(source.titleBgColor, DEFAULT_THEME_UI_META.titleBgColor),
     outlineColor: sanitizeColor(source.outlineColor, DEFAULT_THEME_UI_META.outlineColor),
@@ -514,6 +520,8 @@ function migrateLegacyState(source: Record<string, unknown>): ThemePanelState {
     contentTextColor,
     titleTextColor,
     ioTextColor,
+    ioTextSize: source.ioTextSize,
+    slotPointSize: source.slotPointSize,
     bgColor,
     titleBgColor,
     outlineColor,

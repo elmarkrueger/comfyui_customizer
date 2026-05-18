@@ -5279,6 +5279,18 @@ function createElementBlock(type, props, children, patchFlag, dynamicProps, shap
     )
   );
 }
+function createBlock(type, props, children, patchFlag, dynamicProps) {
+  return setupBlock(
+    createVNode(
+      type,
+      props,
+      children,
+      patchFlag,
+      dynamicProps,
+      true
+    )
+  );
+}
 function isVNode(value) {
   return value ? value.__v_isVNode === true : false;
 }
@@ -5461,6 +5473,9 @@ function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false
 }
 function createTextVNode(text = " ", flag = 0) {
   return createVNode(Text, null, text, flag);
+}
+function createCommentVNode(text = "", asBlock = false) {
+  return asBlock ? (openBlock(), createBlock(Comment, null, text)) : createVNode(Comment, null, text);
 }
 function normalizeVNode(child) {
   if (child == null || typeof child === "boolean") {
@@ -6517,6 +6532,8 @@ const DEFAULT_THEME_UI_META = {
   contentTextColor: "#d9d9d9",
   titleTextColor: "#d9d9d9",
   ioTextColor: "#d9d9d9",
+  ioTextSize: 13,
+  slotPointSize: 12,
   bgColor: "#242424",
   titleBgColor: "#2f2f2f",
   outlineColor: "#00d18f",
@@ -6657,7 +6674,7 @@ const BUILTIN_PRESETS = [
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
-function isRecord(value) {
+function isRecord$1(value) {
   return typeof value === "object" && value !== null;
 }
 function hexToRgb(hex) {
@@ -6741,7 +6758,7 @@ function sanitizePresetName(value) {
   return text.slice(0, 60);
 }
 function sanitizeUiMeta(value) {
-  const source = isRecord(value) ? value : {};
+  const source = isRecord$1(value) ? value : {};
   const normalized = {
     fontFamily: sanitizeFamily(source.fontFamily, DEFAULT_THEME_UI_META.fontFamily),
     bodyFontSize: clampInt(source.bodyFontSize, 8, 56, DEFAULT_THEME_UI_META.bodyFontSize),
@@ -6750,6 +6767,8 @@ function sanitizeUiMeta(value) {
     contentTextColor: sanitizeColor(source.contentTextColor, DEFAULT_THEME_UI_META.contentTextColor),
     titleTextColor: sanitizeColor(source.titleTextColor, DEFAULT_THEME_UI_META.titleTextColor),
     ioTextColor: sanitizeColor(source.ioTextColor, DEFAULT_THEME_UI_META.ioTextColor),
+    ioTextSize: clampInt(source.ioTextSize, 8, 40, DEFAULT_THEME_UI_META.ioTextSize),
+    slotPointSize: clampInt(source.slotPointSize, 6, 26, DEFAULT_THEME_UI_META.slotPointSize),
     bgColor: sanitizeColor(source.bgColor, DEFAULT_THEME_UI_META.bgColor),
     titleBgColor: sanitizeColor(source.titleBgColor, DEFAULT_THEME_UI_META.titleBgColor),
     outlineColor: sanitizeColor(source.outlineColor, DEFAULT_THEME_UI_META.outlineColor),
@@ -6771,7 +6790,7 @@ function sanitizeUiMeta(value) {
   };
 }
 function sanitizeLitegraphBase(value) {
-  const source = isRecord(value) ? value : {};
+  const source = isRecord$1(value) ? value : {};
   return {
     NODE_TITLE_COLOR: sanitizeColor(source.NODE_TITLE_COLOR, DEFAULT_LITEGRAPH_BASE.NODE_TITLE_COLOR),
     NODE_SELECTED_TITLE_COLOR: sanitizeColor(
@@ -6809,7 +6828,7 @@ function sanitizeLitegraphBase(value) {
   };
 }
 function sanitizeComfyBase(value) {
-  const source = isRecord(value) ? value : {};
+  const source = isRecord$1(value) ? value : {};
   return {
     fgColor: sanitizeColor(source.fgColor, DEFAULT_COMFY_BASE.fgColor),
     bgColor: sanitizeColor(source.bgColor, DEFAULT_COMFY_BASE.bgColor),
@@ -6823,7 +6842,7 @@ function sanitizeComfyBase(value) {
   };
 }
 function sanitizeNodeSlot(value) {
-  const source = isRecord(value) ? value : {};
+  const source = isRecord$1(value) ? value : {};
   const normalized = { ...DEFAULT_NODE_SLOT };
   for (const key of SLOT_KEYS) {
     normalized[key] = sanitizeColor(source[key], DEFAULT_NODE_SLOT[key]);
@@ -6831,7 +6850,7 @@ function sanitizeNodeSlot(value) {
   return normalized;
 }
 function hasV2Shape(source) {
-  return source.schemaVersion === 2 || isRecord(source.uiMeta) && isRecord(source.litegraphBase);
+  return source.schemaVersion === 2 || isRecord$1(source.uiMeta) && isRecord$1(source.litegraphBase);
 }
 function migrateLegacyState(source) {
   const base = deepClone(DEFAULT_THEME_PANEL_STATE);
@@ -6851,6 +6870,8 @@ function migrateLegacyState(source) {
     contentTextColor,
     titleTextColor,
     ioTextColor,
+    ioTextSize: source.ioTextSize,
+    slotPointSize: source.slotPointSize,
     bgColor,
     titleBgColor,
     outlineColor,
@@ -6883,12 +6904,12 @@ function migrateLegacyState(source) {
   return base;
 }
 function sanitizeThemePreset(value, fallbackIndex = 0) {
-  if (!isRecord(value)) {
+  if (!isRecord$1(value)) {
     return null;
   }
   const id = sanitizePresetId(value.id, `preset_${fallbackIndex + 1}`);
   const name = sanitizePresetName(value.name);
-  const snapshotSource = isRecord(value.snapshot) ? value.snapshot : value;
+  const snapshotSource = isRecord$1(value.snapshot) ? value.snapshot : value;
   const snapshot = {
     uiMeta: sanitizeUiMeta(snapshotSource.uiMeta),
     litegraphBase: sanitizeLitegraphBase(snapshotSource.litegraphBase),
@@ -6914,14 +6935,14 @@ function sanitizeCustomPresets(value) {
   return sanitized;
 }
 function sanitizeThemeState(value) {
-  const source = isRecord(value) ? value : {};
+  const source = isRecord$1(value) ? value : {};
   const seed = hasV2Shape(source) ? source : migrateLegacyState(source);
-  const seedRecord = isRecord(seed) ? seed : {};
+  const seedRecord = isRecord$1(seed) ? seed : {};
   const uiMeta = sanitizeUiMeta(seedRecord.uiMeta);
   const litegraphBase = sanitizeLitegraphBase(seedRecord.litegraphBase);
   const comfyBase = sanitizeComfyBase(seedRecord.comfyBase);
   const nodeSlot = sanitizeNodeSlot(seedRecord.nodeSlot);
-  const presetsRecord = isRecord(seedRecord.presets) ? seedRecord.presets : {};
+  const presetsRecord = isRecord$1(seedRecord.presets) ? seedRecord.presets : {};
   const customPresets = sanitizeCustomPresets(presetsRecord.custom);
   return {
     schemaVersion: 2,
@@ -7072,7 +7093,7 @@ function importCustomPresets(raw) {
   }
   try {
     const parsed = JSON.parse(raw);
-    const presetArray = isRecord(parsed) && Array.isArray(parsed.presets) ? parsed.presets : Array.isArray(parsed) ? parsed : [];
+    const presetArray = isRecord$1(parsed) && Array.isArray(parsed.presets) ? parsed.presets : Array.isArray(parsed) ? parsed : [];
     return sanitizeCustomPresets(presetArray);
   } catch {
     return [];
@@ -7200,6 +7221,27 @@ const SLOT_TEXT_SUFFIXES = [
   " .lg-slot label",
   ' [data-slot="slot"] label'
 ];
+const SLOT_POINT_SIZE_SUFFIXES = [
+  " .node-slot-handle",
+  " .node-slot-dot",
+  " .slot-handle",
+  " .slot-dot",
+  " .slot_input",
+  " .slot_output",
+  " .slot_in",
+  " .slot_out",
+  " .lg-slot > .slot",
+  ' [data-slot="slot"] > .slot'
+];
+const SLOT_POINT_PSEUDO_SUFFIXES = [
+  " .node-slot-handle::before",
+  " .node-slot-dot::before",
+  " .slot-handle::before",
+  " .slot-dot::before",
+  " .slot::before",
+  " .lg-slot::before",
+  ' [data-slot="slot"]::before'
+];
 const SLOT_SELECTOR_SUFFIXES = [
   ".lg-slot",
   "[data-slot]",
@@ -7255,15 +7297,43 @@ function compileSlotCss(state) {
   const slotMap = state.nodeSlot;
   for (const key of Object.keys(slotMap)) {
     const slotColor = slotMap[key];
+    const typeSelector = `.slot-dot[style*="--color-datatype-${key}"]`;
     lines.push(`
 ${slotSelectorsFor(key)} {
   border-color: ${slotColor} !important;
   color: ${slotColor} !important;
   fill: ${slotColor} !important;
   background-color: ${slotColor} !important;
+}
+
+${typeSelector} {
+  background-color: ${slotColor} !important;
+  border-color: ${slotColor} !important;
 }`);
   }
   return lines.join("\n");
+}
+function compileSlotPointSizeCss(pointSize) {
+  const pointSelector = expandRootSuffixes(SLOT_POINT_SIZE_SUFFIXES);
+  const pseudoPointSelector = expandRootSuffixes(SLOT_POINT_PSEUDO_SUFFIXES);
+  return `
+${pointSelector} {
+  --duffy-slot-point-size: ${pointSize}px !important;
+  width: var(--duffy-slot-point-size) !important;
+  height: var(--duffy-slot-point-size) !important;
+  min-width: var(--duffy-slot-point-size) !important;
+  min-height: var(--duffy-slot-point-size) !important;
+  border-radius: 999px !important;
+}
+
+${pseudoPointSelector} {
+  width: var(--duffy-slot-point-size) !important;
+  height: var(--duffy-slot-point-size) !important;
+  min-width: var(--duffy-slot-point-size) !important;
+  min-height: var(--duffy-slot-point-size) !important;
+  border-radius: 999px !important;
+}
+`;
 }
 function compileOutlineCss(state) {
   const outlineColor = state.uiMeta.outlineColor;
@@ -7339,6 +7409,8 @@ function compileCss(state) {
 body,
 .dark-theme {
   --comfy-textarea-font-size: ${ui.textareaFontSize}px !important;
+  --duffy-slot-point-size: ${ui.slotPointSize}px !important;
+  --duffy-slot-font-size: ${ui.ioTextSize}px !important;
   --component-node-foreground: ${litegraphBase.NODE_TEXT_COLOR} !important;
   --component-node-foreground-secondary: ${litegraphBase.WIDGET_SECONDARY_TEXT_COLOR} !important;
   --component-node-background: ${litegraphBase.NODE_DEFAULT_BGCOLOR} !important;
@@ -7404,6 +7476,7 @@ ${expandRootSuffixes([" .text-node-component-header-icon"])} {
 
 ${slotTextSelector} {
   color: ${ui.ioTextColor} !important;
+  font-size: ${ui.ioTextSize}px !important;
 }
 
 ${expandRootSuffixes([' [data-slot="content"] .text-node-component-slot-text'])} {
@@ -7451,6 +7524,8 @@ svg polyline {
 }
 
 ${compileSlotCss(state)}
+
+${compileSlotPointSizeCss(ui.slotPointSize)}
 
 ${compileOutlineCss(state)}
 `;
@@ -7500,37 +7575,77 @@ const FAMILY_RE = /^[a-zA-Z0-9 _-]{1,80}$/;
 const FORMAT_RE = /^(ttf|otf|woff|woff2)$/;
 const remoteFonts = /* @__PURE__ */ new Map();
 const loadedFamilies = /* @__PURE__ */ new Set();
+function isRecord(value) {
+  return typeof value === "object" && value !== null;
+}
 function isSafeFontRecord(value) {
-  if (typeof value !== "object" || value === null) {
+  if (!isRecord(value)) {
     return false;
   }
   const candidate = value;
   return typeof candidate.filename === "string" && typeof candidate.fontFamily === "string" && typeof candidate.url === "string" && typeof candidate.format === "string" && FAMILY_RE.test(candidate.fontFamily.trim()) && FORMAT_RE.test(candidate.format.trim().toLowerCase()) && candidate.url.startsWith("/custom_theme_fonts/");
 }
-async function refreshFontCatalog() {
+function normalizeFontRecord(value) {
+  return {
+    filename: value.filename,
+    fontFamily: value.fontFamily.trim(),
+    url: value.url,
+    format: value.format.toLowerCase()
+  };
+}
+function parseFontRecords(payload) {
+  const records = Array.isArray(payload) ? payload : isRecord(payload) ? payload.fonts : void 0;
+  if (!Array.isArray(records)) {
+    return [];
+  }
+  const parsed = [];
+  for (const record of records) {
+    if (!isSafeFontRecord(record)) {
+      continue;
+    }
+    parsed.push(normalizeFontRecord(record));
+  }
+  return parsed;
+}
+function applyRemoteFonts(records) {
   remoteFonts.clear();
+  for (const record of records) {
+    remoteFonts.set(record.fontFamily, record);
+  }
+}
+function safeErrorMessage(payload, fallback) {
+  if (isRecord(payload) && typeof payload.error === "string" && payload.error.trim()) {
+    return payload.error.trim();
+  }
+  return fallback;
+}
+async function readJsonPayload(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+function extensionFromFilename(filename) {
+  const parts = filename.split(".");
+  if (parts.length < 2) {
+    return "";
+  }
+  return parts[parts.length - 1].toLowerCase();
+}
+async function refreshFontCatalog() {
   try {
     const response = await api.fetchApi("/api/duffy/theme_fonts");
     if (!response.ok) {
       return [...SYSTEM_FONT_FAMILIES];
     }
-    const payload = await response.json();
-    const records = Array.isArray(payload) ? payload : payload?.fonts;
-    if (!Array.isArray(records)) {
+    const payload = await readJsonPayload(response);
+    const records = parseFontRecords(payload);
+    if (records.length < 1) {
+      applyRemoteFonts([]);
       return [...SYSTEM_FONT_FAMILIES];
     }
-    for (const record of records) {
-      if (!isSafeFontRecord(record)) {
-        continue;
-      }
-      const fontFamily = record.fontFamily.trim();
-      remoteFonts.set(fontFamily, {
-        filename: record.filename,
-        fontFamily,
-        url: record.url,
-        format: record.format.toLowerCase()
-      });
-    }
+    applyRemoteFonts(records);
   } catch {
     return [...SYSTEM_FONT_FAMILIES];
   }
@@ -7542,6 +7657,78 @@ function getAvailableFontFamilies() {
     unique.add(family);
   }
   return Array.from(unique.values());
+}
+function getCustomFonts() {
+  return Array.from(remoteFonts.values()).sort((a, b) => a.fontFamily.localeCompare(b.fontFamily));
+}
+async function uploadThemeFont(file) {
+  const extension = extensionFromFilename(file.name);
+  if (!FORMAT_RE.test(extension)) {
+    return {
+      ok: false,
+      error: "Unsupported font format. Use .ttf, .otf, .woff, or .woff2."
+    };
+  }
+  const formData = new FormData();
+  formData.append("font", file, file.name);
+  try {
+    const response = await api.fetchApi("/api/duffy/theme_fonts", {
+      method: "POST",
+      body: formData
+    });
+    const payload = await readJsonPayload(response);
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: safeErrorMessage(payload, "Failed to upload font.")
+      };
+    }
+    const records = parseFontRecords(payload);
+    applyRemoteFonts(records);
+    const uploaded = isRecord(payload) && isSafeFontRecord(payload.font) ? normalizeFontRecord(payload.font) : void 0;
+    return {
+      ok: true,
+      fontFamily: uploaded?.fontFamily
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "Failed to upload font."
+    };
+  }
+}
+async function deleteThemeFont(filename) {
+  const existing = Array.from(remoteFonts.values()).find((font) => font.filename === filename);
+  try {
+    const response = await api.fetchApi(`/api/duffy/theme_fonts/${encodeURIComponent(filename)}`, {
+      method: "DELETE"
+    });
+    const payload = await readJsonPayload(response);
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: safeErrorMessage(payload, "Failed to delete font.")
+      };
+    }
+    const records = parseFontRecords(payload);
+    applyRemoteFonts(records);
+    if (existing && !remoteFonts.has(existing.fontFamily)) {
+      loadedFamilies.delete(existing.fontFamily);
+    }
+    const removedFamily = isRecord(payload) && isRecord(payload.removed) && typeof payload.removed.fontFamily === "string" ? payload.removed.fontFamily.trim() : existing?.fontFamily;
+    if (removedFamily && !remoteFonts.has(removedFamily)) {
+      loadedFamilies.delete(removedFamily);
+    }
+    return {
+      ok: true,
+      fontFamily: removedFamily
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "Failed to delete font."
+    };
+  }
 }
 async function ensureFontLoaded(fontFamily) {
   const normalized = fontFamily.trim();
@@ -7576,32 +7763,58 @@ const _hoisted_3 = {
 const _hoisted_4 = { class: "section-body" };
 const _hoisted_5 = { class: "control-row" };
 const _hoisted_6 = ["value"];
-const _hoisted_7 = { class: "control-row slider-row" };
-const _hoisted_8 = { class: "control-row slider-row" };
-const _hoisted_9 = { class: "control-row slider-row" };
-const _hoisted_10 = { class: "control-grid" };
-const _hoisted_11 = ["onUpdate:modelValue"];
+const _hoisted_7 = { class: "control-row" };
+const _hoisted_8 = { class: "inline-controls" };
+const _hoisted_9 = ["disabled"];
+const _hoisted_10 = {
+  key: 0,
+  class: "feedback-text feedback-error"
+};
+const _hoisted_11 = {
+  key: 1,
+  class: "feedback-text feedback-info"
+};
 const _hoisted_12 = { class: "control-row" };
-const _hoisted_13 = { class: "panel-section" };
-const _hoisted_14 = { class: "section-body" };
-const _hoisted_15 = { class: "control-grid" };
-const _hoisted_16 = ["onUpdate:modelValue"];
-const _hoisted_17 = { class: "panel-section" };
-const _hoisted_18 = { class: "section-body" };
-const _hoisted_19 = { class: "control-grid" };
-const _hoisted_20 = ["onUpdate:modelValue"];
-const _hoisted_21 = { class: "control-row" };
-const _hoisted_22 = { class: "panel-section" };
-const _hoisted_23 = { class: "section-body" };
-const _hoisted_24 = { class: "control-grid slot-grid" };
+const _hoisted_13 = {
+  key: 0,
+  class: "font-list"
+};
+const _hoisted_14 = { class: "font-meta" };
+const _hoisted_15 = { class: "font-family" };
+const _hoisted_16 = { class: "font-file" };
+const _hoisted_17 = ["disabled", "onClick"];
+const _hoisted_18 = {
+  key: 1,
+  class: "font-empty"
+};
+const _hoisted_19 = { class: "control-row slider-row" };
+const _hoisted_20 = { class: "control-row slider-row" };
+const _hoisted_21 = { class: "control-row slider-row" };
+const _hoisted_22 = { class: "control-row slider-row" };
+const _hoisted_23 = { class: "control-row slider-row" };
+const _hoisted_24 = { class: "control-grid" };
 const _hoisted_25 = ["onUpdate:modelValue"];
-const _hoisted_26 = { class: "panel-section" };
-const _hoisted_27 = { class: "section-body" };
-const _hoisted_28 = { class: "control-row" };
-const _hoisted_29 = ["value"];
-const _hoisted_30 = { class: "inline-controls" };
-const _hoisted_31 = ["onKeydown"];
-const _hoisted_32 = { class: "inline-controls" };
+const _hoisted_26 = { class: "control-row" };
+const _hoisted_27 = { class: "panel-section" };
+const _hoisted_28 = { class: "section-body" };
+const _hoisted_29 = { class: "control-grid" };
+const _hoisted_30 = ["onUpdate:modelValue"];
+const _hoisted_31 = { class: "panel-section" };
+const _hoisted_32 = { class: "section-body" };
+const _hoisted_33 = { class: "control-grid" };
+const _hoisted_34 = ["onUpdate:modelValue"];
+const _hoisted_35 = { class: "control-row" };
+const _hoisted_36 = { class: "panel-section" };
+const _hoisted_37 = { class: "section-body" };
+const _hoisted_38 = { class: "control-grid slot-grid" };
+const _hoisted_39 = ["onUpdate:modelValue"];
+const _hoisted_40 = { class: "panel-section" };
+const _hoisted_41 = { class: "section-body" };
+const _hoisted_42 = { class: "control-row" };
+const _hoisted_43 = ["value"];
+const _hoisted_44 = { class: "inline-controls" };
+const _hoisted_45 = ["onKeydown"];
+const _hoisted_46 = { class: "inline-controls" };
 const _sfc_main = /* @__PURE__ */ defineComponent({
   __name: "ThemeControlPanel",
   props: {
@@ -7611,8 +7824,14 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     const props = __props;
     const state = /* @__PURE__ */ ref(sanitizeThemeState(DEFAULT_THEME_PANEL_STATE));
     const fontFamilies = /* @__PURE__ */ ref(getAvailableFontFamilies());
+    const customFonts = /* @__PURE__ */ ref(getCustomFonts());
     const newPresetName = /* @__PURE__ */ ref("");
     const presetImportInput = /* @__PURE__ */ ref(null);
+    const fontUploadInput = /* @__PURE__ */ ref(null);
+    const isUploadingFont = /* @__PURE__ */ ref(false);
+    const deletingFontFilename = /* @__PURE__ */ ref(null);
+    const fontFeedbackInfo = /* @__PURE__ */ ref("");
+    const fontFeedbackError = /* @__PURE__ */ ref("");
     const uiColorFields = [
       { key: "contentTextColor", label: "Content Text" },
       { key: "titleTextColor", label: "Title Text" },
@@ -7689,7 +7908,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     }));
     const previewSubtextStyle = computed(() => ({
       color: state.value.uiMeta.ioTextColor,
-      fontSize: `${Math.max(8, state.value.uiMeta.bodyFontSize - 2)}px`
+      fontSize: `${state.value.uiMeta.ioTextSize}px`
     }));
     function serialise() {
       return serializeThemeState(state.value);
@@ -7706,6 +7925,66 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     async function onFontFamilyChange() {
       await ensureFontLoaded(state.value.uiMeta.fontFamily);
       emitChange();
+    }
+    function openFontUploadDialog() {
+      if (isUploadingFont.value) {
+        return;
+      }
+      fontUploadInput.value?.click();
+    }
+    async function onFontUploadFile(event) {
+      const target = event.target;
+      const file = target?.files?.[0];
+      if (target) {
+        target.value = "";
+      }
+      if (!file || isUploadingFont.value) {
+        return;
+      }
+      isUploadingFont.value = true;
+      fontFeedbackInfo.value = "";
+      fontFeedbackError.value = "";
+      const result = await uploadThemeFont(file);
+      await refreshFonts();
+      if (!result.ok) {
+        fontFeedbackError.value = result.error ?? "Failed to upload font.";
+        isUploadingFont.value = false;
+        return;
+      }
+      if (result.fontFamily) {
+        state.value.uiMeta.fontFamily = result.fontFamily;
+        await ensureFontLoaded(result.fontFamily);
+        emitChange();
+      }
+      fontFeedbackInfo.value = result.fontFamily ? `Uploaded ${file.name} as ${result.fontFamily}.` : `Uploaded ${file.name}.`;
+      isUploadingFont.value = false;
+    }
+    async function onDeleteFont(font) {
+      if (deletingFontFilename.value) {
+        return;
+      }
+      const confirmed = window.confirm(`Delete custom font file "${font.filename}"?`);
+      if (!confirmed) {
+        return;
+      }
+      deletingFontFilename.value = font.filename;
+      fontFeedbackInfo.value = "";
+      fontFeedbackError.value = "";
+      const wasActiveFont = state.value.uiMeta.fontFamily === font.fontFamily;
+      const result = await deleteThemeFont(font.filename);
+      await refreshFonts();
+      if (!result.ok) {
+        fontFeedbackError.value = result.error ?? "Failed to delete font.";
+        deletingFontFilename.value = null;
+        return;
+      }
+      if (wasActiveFont) {
+        state.value.uiMeta.fontFamily = DEFAULT_THEME_PANEL_STATE.uiMeta.fontFamily;
+        await ensureFontLoaded(state.value.uiMeta.fontFamily);
+        emitChange();
+      }
+      fontFeedbackInfo.value = `Deleted ${font.filename}.`;
+      deletingFontFilename.value = null;
     }
     async function onPresetSelect() {
       const presetId = state.value.uiMeta.activePresetId;
@@ -7771,6 +8050,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     }
     async function refreshFonts() {
       fontFamilies.value = await refreshFontCatalog();
+      customFonts.value = getCustomFonts();
     }
     function cleanup() {
     }
@@ -7784,7 +8064,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     __expose({ serialise, deserialise, cleanup });
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1, [
-        _cache[22] || (_cache[22] = createBaseVNode("header", { class: "panel-header" }, [
+        _cache[28] || (_cache[28] = createBaseVNode("header", { class: "panel-header" }, [
           createBaseVNode("h3", null, "Theme Control Panel v2"),
           createBaseVNode("p", null, "Expanded Nodes 2.0 palette, typography and presets")
         ], -1)),
@@ -7807,10 +8087,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           ])
         ], 4),
         createBaseVNode("details", _hoisted_3, [
-          _cache[14] || (_cache[14] = createBaseVNode("summary", null, "Typography and Core Visuals", -1)),
+          _cache[20] || (_cache[20] = createBaseVNode("summary", null, "Typography and Core Visuals", -1)),
           createBaseVNode("div", _hoisted_4, [
             createBaseVNode("div", _hoisted_5, [
-              _cache[8] || (_cache[8] = createBaseVNode("label", null, "Font Family", -1)),
+              _cache[10] || (_cache[10] = createBaseVNode("label", null, "Font Family", -1)),
               withDirectives(createBaseVNode("select", {
                 "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => state.value.uiMeta.fontFamily = $event),
                 class: "control-input",
@@ -7827,7 +8107,49 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ])
             ]),
             createBaseVNode("div", _hoisted_7, [
-              _cache[9] || (_cache[9] = createBaseVNode("label", null, "Body Text Size", -1)),
+              _cache[11] || (_cache[11] = createBaseVNode("label", null, "Custom Font Files", -1)),
+              createBaseVNode("div", _hoisted_8, [
+                createBaseVNode("button", {
+                  class: "action-button",
+                  type: "button",
+                  disabled: isUploadingFont.value,
+                  onClick: openFontUploadDialog
+                }, toDisplayString(isUploadingFont.value ? "Uploading..." : "Upload Font"), 9, _hoisted_9),
+                createBaseVNode("input", {
+                  ref_key: "fontUploadInput",
+                  ref: fontUploadInput,
+                  class: "hidden-input",
+                  type: "file",
+                  accept: ".ttf,.otf,.woff,.woff2",
+                  onChange: onFontUploadFile
+                }, null, 544)
+              ]),
+              fontFeedbackError.value ? (openBlock(), createElementBlock("p", _hoisted_10, toDisplayString(fontFeedbackError.value), 1)) : fontFeedbackInfo.value ? (openBlock(), createElementBlock("p", _hoisted_11, toDisplayString(fontFeedbackInfo.value), 1)) : createCommentVNode("", true)
+            ]),
+            createBaseVNode("div", _hoisted_12, [
+              _cache[12] || (_cache[12] = createBaseVNode("label", null, "Installed Custom Fonts", -1)),
+              customFonts.value.length > 0 ? (openBlock(), createElementBlock("div", _hoisted_13, [
+                (openBlock(true), createElementBlock(Fragment, null, renderList(customFonts.value, (font) => {
+                  return openBlock(), createElementBlock("div", {
+                    key: font.filename,
+                    class: "font-item"
+                  }, [
+                    createBaseVNode("div", _hoisted_14, [
+                      createBaseVNode("span", _hoisted_15, toDisplayString(font.fontFamily), 1),
+                      createBaseVNode("span", _hoisted_16, toDisplayString(font.filename), 1)
+                    ]),
+                    createBaseVNode("button", {
+                      class: "action-button compact-button",
+                      type: "button",
+                      disabled: isUploadingFont.value || deletingFontFilename.value === font.filename,
+                      onClick: ($event) => onDeleteFont(font)
+                    }, toDisplayString(deletingFontFilename.value === font.filename ? "Deleting..." : "Delete"), 9, _hoisted_17)
+                  ]);
+                }), 128))
+              ])) : (openBlock(), createElementBlock("p", _hoisted_18, "No custom fonts found in the fonts folder."))
+            ]),
+            createBaseVNode("div", _hoisted_19, [
+              _cache[13] || (_cache[13] = createBaseVNode("label", null, "Body Text Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => state.value.uiMeta.bodyFontSize = $event),
                 class: "control-input",
@@ -7846,8 +8168,8 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ]),
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.bodyFontSize) + "px", 1)
             ]),
-            createBaseVNode("div", _hoisted_8, [
-              _cache[10] || (_cache[10] = createBaseVNode("label", null, "Header Text Size", -1)),
+            createBaseVNode("div", _hoisted_20, [
+              _cache[14] || (_cache[14] = createBaseVNode("label", null, "Header Text Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => state.value.uiMeta.titleFontSize = $event),
                 class: "control-input",
@@ -7866,8 +8188,8 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ]),
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.titleFontSize) + "px", 1)
             ]),
-            createBaseVNode("div", _hoisted_9, [
-              _cache[11] || (_cache[11] = createBaseVNode("label", null, "Textarea Size", -1)),
+            createBaseVNode("div", _hoisted_21, [
+              _cache[15] || (_cache[15] = createBaseVNode("label", null, "Textarea Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => state.value.uiMeta.textareaFontSize = $event),
                 class: "control-input",
@@ -7886,7 +8208,47 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ]),
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.textareaFontSize) + "px", 1)
             ]),
-            createBaseVNode("div", _hoisted_10, [
+            createBaseVNode("div", _hoisted_22, [
+              _cache[16] || (_cache[16] = createBaseVNode("label", null, "IO Label Size", -1)),
+              withDirectives(createBaseVNode("input", {
+                "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => state.value.uiMeta.ioTextSize = $event),
+                class: "control-input",
+                type: "range",
+                min: "8",
+                max: "40",
+                step: "1",
+                onInput: emitChange
+              }, null, 544), [
+                [
+                  vModelText,
+                  state.value.uiMeta.ioTextSize,
+                  void 0,
+                  { number: true }
+                ]
+              ]),
+              createBaseVNode("span", null, toDisplayString(state.value.uiMeta.ioTextSize) + "px", 1)
+            ]),
+            createBaseVNode("div", _hoisted_23, [
+              _cache[17] || (_cache[17] = createBaseVNode("label", null, "Connection Point Size", -1)),
+              withDirectives(createBaseVNode("input", {
+                "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => state.value.uiMeta.slotPointSize = $event),
+                class: "control-input",
+                type: "range",
+                min: "6",
+                max: "26",
+                step: "1",
+                onInput: emitChange
+              }, null, 544), [
+                [
+                  vModelText,
+                  state.value.uiMeta.slotPointSize,
+                  void 0,
+                  { number: true }
+                ]
+              ]),
+              createBaseVNode("span", null, toDisplayString(state.value.uiMeta.slotPointSize) + "px", 1)
+            ]),
+            createBaseVNode("div", _hoisted_24, [
               (openBlock(), createElementBlock(Fragment, null, renderList(uiColorFields, (field) => {
                 return createBaseVNode("div", {
                   key: field.key,
@@ -7898,19 +8260,19 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                     class: "control-input color-input",
                     type: "color",
                     onInput: emitChange
-                  }, null, 40, _hoisted_11), [
+                  }, null, 40, _hoisted_25), [
                     [vModelText, state.value.uiMeta[field.key]]
                   ])
                 ]);
               }), 64))
             ]),
-            createBaseVNode("div", _hoisted_12, [
-              _cache[13] || (_cache[13] = createBaseVNode("label", null, "Outline Effect", -1)),
+            createBaseVNode("div", _hoisted_26, [
+              _cache[19] || (_cache[19] = createBaseVNode("label", null, "Outline Effect", -1)),
               withDirectives(createBaseVNode("select", {
-                "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => state.value.uiMeta.outlineEffect = $event),
+                "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => state.value.uiMeta.outlineEffect = $event),
                 class: "control-input",
                 onChange: emitChange
-              }, [..._cache[12] || (_cache[12] = [
+              }, [..._cache[18] || (_cache[18] = [
                 createBaseVNode("option", { value: "solid" }, "Solid Border", -1),
                 createBaseVNode("option", { value: "static-glow" }, "Static Glow", -1),
                 createBaseVNode("option", { value: "pulsing-glow" }, "Pulsing Glow", -1),
@@ -7921,10 +8283,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_13, [
-          _cache[15] || (_cache[15] = createBaseVNode("summary", null, "Litegraph Base", -1)),
-          createBaseVNode("div", _hoisted_14, [
-            createBaseVNode("div", _hoisted_15, [
+        createBaseVNode("details", _hoisted_27, [
+          _cache[21] || (_cache[21] = createBaseVNode("summary", null, "Litegraph Base", -1)),
+          createBaseVNode("div", _hoisted_28, [
+            createBaseVNode("div", _hoisted_29, [
               (openBlock(), createElementBlock(Fragment, null, renderList(litegraphColorFields, (field) => {
                 return createBaseVNode("div", {
                   key: field.key,
@@ -7936,7 +8298,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                     class: "control-input color-input",
                     type: "color",
                     onInput: emitChange
-                  }, null, 40, _hoisted_16), [
+                  }, null, 40, _hoisted_30), [
                     [vModelText, state.value.litegraphBase[field.key]]
                   ])
                 ]);
@@ -7944,10 +8306,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_17, [
-          _cache[17] || (_cache[17] = createBaseVNode("summary", null, "Comfy Base", -1)),
-          createBaseVNode("div", _hoisted_18, [
-            createBaseVNode("div", _hoisted_19, [
+        createBaseVNode("details", _hoisted_31, [
+          _cache[23] || (_cache[23] = createBaseVNode("summary", null, "Comfy Base", -1)),
+          createBaseVNode("div", _hoisted_32, [
+            createBaseVNode("div", _hoisted_33, [
               (openBlock(), createElementBlock(Fragment, null, renderList(comfyColorFields, (field) => {
                 return createBaseVNode("div", {
                   key: field.key,
@@ -7959,16 +8321,16 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                     class: "control-input color-input",
                     type: "color",
                     onInput: emitChange
-                  }, null, 40, _hoisted_20), [
+                  }, null, 40, _hoisted_34), [
                     [vModelText, state.value.comfyBase[field.key]]
                   ])
                 ]);
               }), 64))
             ]),
-            createBaseVNode("div", _hoisted_21, [
-              _cache[16] || (_cache[16] = createBaseVNode("label", null, "Bar Shadow", -1)),
+            createBaseVNode("div", _hoisted_35, [
+              _cache[22] || (_cache[22] = createBaseVNode("label", null, "Bar Shadow", -1)),
               withDirectives(createBaseVNode("input", {
-                "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => state.value.comfyBase.barShadow = $event),
+                "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => state.value.comfyBase.barShadow = $event),
                 class: "control-input",
                 type: "text",
                 onInput: emitChange
@@ -7978,10 +8340,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_22, [
-          _cache[18] || (_cache[18] = createBaseVNode("summary", null, "Node Slot Colors", -1)),
-          createBaseVNode("div", _hoisted_23, [
-            createBaseVNode("div", _hoisted_24, [
+        createBaseVNode("details", _hoisted_36, [
+          _cache[24] || (_cache[24] = createBaseVNode("summary", null, "Node Slot Colors", -1)),
+          createBaseVNode("div", _hoisted_37, [
+            createBaseVNode("div", _hoisted_38, [
               (openBlock(), createElementBlock(Fragment, null, renderList(slotColorFields, (field) => {
                 return createBaseVNode("div", {
                   key: field.key,
@@ -7993,7 +8355,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                     class: "control-input color-input",
                     type: "color",
                     onInput: emitChange
-                  }, null, 40, _hoisted_25), [
+                  }, null, 40, _hoisted_39), [
                     [vModelText, state.value.nodeSlot[field.key]]
                   ])
                 ]);
@@ -8001,35 +8363,35 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_26, [
-          _cache[21] || (_cache[21] = createBaseVNode("summary", null, "Presets", -1)),
-          createBaseVNode("div", _hoisted_27, [
-            createBaseVNode("div", _hoisted_28, [
-              _cache[20] || (_cache[20] = createBaseVNode("label", null, "Active Preset", -1)),
+        createBaseVNode("details", _hoisted_40, [
+          _cache[27] || (_cache[27] = createBaseVNode("summary", null, "Presets", -1)),
+          createBaseVNode("div", _hoisted_41, [
+            createBaseVNode("div", _hoisted_42, [
+              _cache[26] || (_cache[26] = createBaseVNode("label", null, "Active Preset", -1)),
               withDirectives(createBaseVNode("select", {
-                "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => activePresetSelection.value = $event),
+                "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => activePresetSelection.value = $event),
                 class: "control-input",
                 onChange: onPresetSelect
               }, [
-                _cache[19] || (_cache[19] = createBaseVNode("option", { value: "" }, "No preset", -1)),
+                _cache[25] || (_cache[25] = createBaseVNode("option", { value: "" }, "No preset", -1)),
                 (openBlock(true), createElementBlock(Fragment, null, renderList(presetOptions.value, (preset) => {
                   return openBlock(), createElementBlock("option", {
                     key: preset.id,
                     value: preset.id
-                  }, toDisplayString(preset.name) + " (" + toDisplayString(preset.source) + ") ", 9, _hoisted_29);
+                  }, toDisplayString(preset.name) + " (" + toDisplayString(preset.source) + ") ", 9, _hoisted_43);
                 }), 128))
               ], 544), [
                 [vModelSelect, activePresetSelection.value]
               ])
             ]),
-            createBaseVNode("div", _hoisted_30, [
+            createBaseVNode("div", _hoisted_44, [
               withDirectives(createBaseVNode("input", {
-                "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => newPresetName.value = $event),
+                "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => newPresetName.value = $event),
                 class: "control-input",
                 type: "text",
                 placeholder: "Preset name",
                 onKeydown: withKeys(withModifiers(savePreset, ["prevent"]), ["enter"])
-              }, null, 40, _hoisted_31), [
+              }, null, 40, _hoisted_45), [
                 [vModelText, newPresetName.value]
               ]),
               createBaseVNode("button", {
@@ -8038,7 +8400,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                 onClick: savePreset
               }, "Save Current")
             ]),
-            createBaseVNode("div", _hoisted_32, [
+            createBaseVNode("div", _hoisted_46, [
               createBaseVNode("button", {
                 class: "action-button",
                 type: "button",
@@ -8083,7 +8445,7 @@ const _export_sfc = (sfc, props) => {
   }
   return target;
 };
-const ThemeControlPanel = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-013637c1"]]);
+const ThemeControlPanel = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-70548b98"]]);
 const MIN_W = 430;
 const MIN_H = 720;
 function notifyThemeConflict(nodeId) {
@@ -8119,6 +8481,59 @@ function isolateContainerEvents(container) {
     event.preventDefault();
   });
 }
+function collectRuntimeSlotColorMaps() {
+  const appAny = app;
+  const globalAny = globalThis;
+  const candidates = [
+    appAny?.canvas?.default_connection_color_byType,
+    appAny?.canvas?.default_connection_color_byTypeOff,
+    globalAny?.app?.canvas?.default_connection_color_byType,
+    globalAny?.app?.canvas?.default_connection_color_byTypeOff,
+    globalAny?.comfyAPI?.app?.app?.canvas?.default_connection_color_byType,
+    globalAny?.comfyAPI?.app?.app?.canvas?.default_connection_color_byTypeOff
+  ];
+  const unique = /* @__PURE__ */ new Set();
+  const maps = [];
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+      continue;
+    }
+    const map = candidate;
+    if (!unique.has(map)) {
+      unique.add(map);
+      maps.push(map);
+    }
+  }
+  return maps;
+}
+function requestCanvasRedraw() {
+  const appAny = app;
+  app.graph?.setDirtyCanvas?.(true, true);
+  appAny?.canvas?.graph?.setDirtyCanvas?.(true, true);
+  appAny?.canvas?.setDirty?.(true, true);
+  appAny?.canvas?.draw?.(true, true);
+}
+function applyRuntimeSlotColors(state) {
+  const normalized = sanitizeThemeState(state);
+  const maps = collectRuntimeSlotColorMaps();
+  if (!maps.length) {
+    return;
+  }
+  for (const map of maps) {
+    for (const [slotType, color] of Object.entries(normalized.nodeSlot)) {
+      const lowerSlotType = slotType.toLowerCase();
+      const hasUpper = slotType in map;
+      const hasLower = lowerSlotType in map;
+      if (hasUpper || !hasLower) {
+        map[slotType] = color;
+      }
+      if (hasLower) {
+        map[lowerSlotType] = color;
+      }
+    }
+  }
+  requestCanvasRedraw();
+}
 app.registerExtension({
   name: "Duffy.ThemeControlPanel.Vue",
   async nodeCreated(node) {
@@ -8135,15 +8550,18 @@ app.registerExtension({
     }
     const initialState = typeof stateWidget?.value === "string" && stateWidget.value.trim() ? deserializeThemeState(stateWidget.value) : { ...DEFAULT_THEME_PANEL_STATE };
     applyThemeNow(initialState);
+    applyRuntimeSlotColors(initialState);
     const container = document.createElement("div");
     container.style.cssText = "width:100%; height:100%; box-sizing:border-box; overflow:hidden;";
     isolateContainerEvents(container);
     const vueApp = createApp(ThemeControlPanel, {
       onChange: (json) => {
+        const nextState = deserializeThemeState(json);
+        applyThemeNow(nextState);
+        applyRuntimeSlotColors(nextState);
         if (stateWidget) {
           stateWidget.value = json;
         }
-        app.graph?.setDirtyCanvas?.(true, false);
         node.setDirtyCanvas?.(true, true);
       }
     });
@@ -8158,7 +8576,9 @@ app.registerExtension({
       if (typeof value !== "string" || !value.trim()) {
         return;
       }
-      applyThemeNow(deserializeThemeState(value));
+      const hydratedState = deserializeThemeState(value);
+      applyThemeNow(hydratedState);
+      applyRuntimeSlotColors(hydratedState);
       instance.deserialise?.(value);
     };
     if (stateWidget?.value) {
@@ -8204,7 +8624,7 @@ app.registerExtension({
   try {
     if (typeof document != "undefined") {
       var elementStyle = document.createElement("style");
-      elementStyle.appendChild(document.createTextNode('.theme-panel-root[data-v-013637c1] {\r\n  height: 100%;\r\n  display: grid;\r\n  grid-template-rows: auto auto auto auto auto auto auto auto;\r\n  gap: 10px;\r\n  padding: 10px;\r\n  color: #ececec;\r\n  background:\r\n    radial-gradient(120% 80% at 12% 0%, rgba(31, 199, 157, 0.22), transparent 62%),\r\n    linear-gradient(150deg, rgba(23, 29, 36, 0.96), rgba(17, 20, 25, 0.96));\r\n  border: 1px solid rgba(0, 209, 143, 0.3);\r\n  border-radius: 10px;\r\n  box-sizing: border-box;\r\n  overflow-y: auto;\r\n  font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;\n}\n.panel-header h3[data-v-013637c1] {\r\n  margin: 0;\r\n  font-size: 15px;\r\n  letter-spacing: 0.03em;\n}\n.panel-header p[data-v-013637c1] {\r\n  margin: 4px 0 0;\r\n  font-size: 11px;\r\n  color: #9db2c2;\n}\n.preview-card[data-v-013637c1] {\r\n  border: 1px solid;\r\n  border-radius: 8px;\r\n  overflow: hidden;\n}\n.preview-header[data-v-013637c1] {\r\n  padding: 6px 8px;\r\n  font-weight: 600;\n}\n.preview-content[data-v-013637c1] {\r\n  padding: 8px;\r\n  display: grid;\r\n  gap: 6px;\n}\n.preview-subtext[data-v-013637c1] {\r\n  opacity: 0.82;\n}\n.panel-section[data-v-013637c1] {\r\n  border: 1px solid rgba(129, 149, 164, 0.24);\r\n  border-radius: 8px;\r\n  background: rgba(18, 24, 32, 0.72);\r\n  overflow: hidden;\n}\n.panel-section summary[data-v-013637c1] {\r\n  cursor: pointer;\r\n  padding: 8px;\r\n  font-size: 12px;\r\n  letter-spacing: 0.05em;\r\n  text-transform: uppercase;\r\n  color: #8cf2d2;\r\n  user-select: none;\n}\n.section-body[data-v-013637c1] {\r\n  padding: 0 8px 8px;\r\n  display: grid;\r\n  gap: 8px;\n}\n.control-row[data-v-013637c1] {\r\n  display: grid;\r\n  gap: 4px;\n}\n.control-grid[data-v-013637c1] {\r\n  display: grid;\r\n  grid-template-columns: repeat(2, minmax(0, 1fr));\r\n  gap: 8px;\n}\n.slot-grid[data-v-013637c1] {\r\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n}\n.control-row label[data-v-013637c1] {\r\n  font-size: 11px;\r\n  color: #c3d6e4;\n}\n.control-input[data-v-013637c1] {\r\n  width: 100%;\r\n  box-sizing: border-box;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(8, 12, 18, 0.7);\r\n  color: #ecf4fa;\r\n  padding: 6px 8px;\n}\n.control-input[type="range"][data-v-013637c1] {\r\n  padding: 0;\n}\n.slider-row span[data-v-013637c1] {\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.color-input[data-v-013637c1] {\r\n  padding: 0;\r\n  min-height: 30px;\n}\n.inline-controls[data-v-013637c1] {\r\n  display: flex;\r\n  flex-wrap: wrap;\r\n  gap: 8px;\n}\n.action-button[data-v-013637c1],\r\n.reset-button[data-v-013637c1] {\r\n  border: 1px solid rgba(147, 170, 184, 0.4);\r\n  border-radius: 6px;\r\n  background: linear-gradient(135deg, rgba(34, 43, 54, 0.95), rgba(25, 34, 44, 0.95));\r\n  color: #eff7fa;\r\n  cursor: pointer;\r\n  padding: 7px 10px;\r\n  font-size: 11px;\r\n  letter-spacing: 0.03em;\n}\n.action-button[data-v-013637c1]:hover,\r\n.reset-button[data-v-013637c1]:hover {\r\n  border-color: rgba(135, 243, 206, 0.65);\n}\n.hidden-input[data-v-013637c1] {\r\n  display: none;\n}\n.panel-footer[data-v-013637c1] {\r\n  display: flex;\r\n  justify-content: flex-end;\n}'));
+      elementStyle.appendChild(document.createTextNode('.theme-panel-root[data-v-70548b98] {\r\n  height: 100%;\r\n  display: grid;\r\n  grid-template-rows: auto auto auto auto auto auto auto auto;\r\n  gap: 10px;\r\n  padding: 10px;\r\n  color: #ececec;\r\n  background:\r\n    radial-gradient(120% 80% at 12% 0%, rgba(31, 199, 157, 0.22), transparent 62%),\r\n    linear-gradient(150deg, rgba(23, 29, 36, 0.96), rgba(17, 20, 25, 0.96));\r\n  border: 1px solid rgba(0, 209, 143, 0.3);\r\n  border-radius: 10px;\r\n  box-sizing: border-box;\r\n  overflow-y: auto;\r\n  font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;\n}\n.panel-header h3[data-v-70548b98] {\r\n  margin: 0;\r\n  font-size: 15px;\r\n  letter-spacing: 0.03em;\n}\n.panel-header p[data-v-70548b98] {\r\n  margin: 4px 0 0;\r\n  font-size: 11px;\r\n  color: #9db2c2;\n}\n.preview-card[data-v-70548b98] {\r\n  border: 1px solid;\r\n  border-radius: 8px;\r\n  overflow: hidden;\n}\n.preview-header[data-v-70548b98] {\r\n  padding: 6px 8px;\r\n  font-weight: 600;\n}\n.preview-content[data-v-70548b98] {\r\n  padding: 8px;\r\n  display: grid;\r\n  gap: 6px;\n}\n.preview-subtext[data-v-70548b98] {\r\n  opacity: 0.82;\n}\n.panel-section[data-v-70548b98] {\r\n  border: 1px solid rgba(129, 149, 164, 0.24);\r\n  border-radius: 8px;\r\n  background: rgba(18, 24, 32, 0.72);\r\n  overflow: hidden;\n}\n.panel-section summary[data-v-70548b98] {\r\n  cursor: pointer;\r\n  padding: 8px;\r\n  font-size: 12px;\r\n  letter-spacing: 0.05em;\r\n  text-transform: uppercase;\r\n  color: #8cf2d2;\r\n  user-select: none;\n}\n.section-body[data-v-70548b98] {\r\n  padding: 0 8px 8px;\r\n  display: grid;\r\n  gap: 8px;\n}\n.control-row[data-v-70548b98] {\r\n  display: grid;\r\n  gap: 4px;\n}\n.control-grid[data-v-70548b98] {\r\n  display: grid;\r\n  grid-template-columns: repeat(2, minmax(0, 1fr));\r\n  gap: 8px;\n}\n.slot-grid[data-v-70548b98] {\r\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n}\n.control-row label[data-v-70548b98] {\r\n  font-size: 11px;\r\n  color: #c3d6e4;\n}\n.control-input[data-v-70548b98] {\r\n  width: 100%;\r\n  box-sizing: border-box;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(8, 12, 18, 0.7);\r\n  color: #ecf4fa;\r\n  padding: 6px 8px;\n}\n.control-input[type="range"][data-v-70548b98] {\r\n  padding: 0;\n}\n.slider-row span[data-v-70548b98] {\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.color-input[data-v-70548b98] {\r\n  padding: 0;\r\n  min-height: 30px;\n}\n.inline-controls[data-v-70548b98] {\r\n  display: flex;\r\n  flex-wrap: wrap;\r\n  gap: 8px;\n}\n.feedback-text[data-v-70548b98] {\r\n  margin: 0;\r\n  font-size: 11px;\n}\n.feedback-error[data-v-70548b98] {\r\n  color: #ff8b8b;\n}\n.feedback-info[data-v-70548b98] {\r\n  color: #8cf2d2;\n}\n.font-list[data-v-70548b98] {\r\n  display: grid;\r\n  gap: 6px;\n}\n.font-item[data-v-70548b98] {\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: space-between;\r\n  gap: 8px;\r\n  padding: 6px 8px;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(10, 14, 20, 0.72);\n}\n.font-meta[data-v-70548b98] {\r\n  min-width: 0;\r\n  display: grid;\r\n  gap: 2px;\n}\n.font-family[data-v-70548b98] {\r\n  font-size: 12px;\r\n  color: #e8f4f8;\n}\n.font-file[data-v-70548b98] {\r\n  font-size: 10px;\r\n  color: #9fb2c2;\r\n  word-break: break-all;\n}\n.font-empty[data-v-70548b98] {\r\n  margin: 0;\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.action-button[data-v-70548b98],\r\n.reset-button[data-v-70548b98] {\r\n  border: 1px solid rgba(147, 170, 184, 0.4);\r\n  border-radius: 6px;\r\n  background: linear-gradient(135deg, rgba(34, 43, 54, 0.95), rgba(25, 34, 44, 0.95));\r\n  color: #eff7fa;\r\n  cursor: pointer;\r\n  padding: 7px 10px;\r\n  font-size: 11px;\r\n  letter-spacing: 0.03em;\n}\n.compact-button[data-v-70548b98] {\r\n  padding: 5px 8px;\r\n  font-size: 10px;\n}\n.action-button[data-v-70548b98]:hover,\r\n.reset-button[data-v-70548b98]:hover {\r\n  border-color: rgba(135, 243, 206, 0.65);\n}\n.action-button[data-v-70548b98]:disabled,\r\n.reset-button[data-v-70548b98]:disabled {\r\n  opacity: 0.55;\r\n  cursor: not-allowed;\r\n  border-color: rgba(147, 170, 184, 0.24);\n}\n.hidden-input[data-v-70548b98] {\r\n  display: none;\n}\n.panel-footer[data-v-70548b98] {\r\n  display: flex;\r\n  justify-content: flex-end;\n}'));
       document.head.appendChild(elementStyle);
     }
   } catch (e) {

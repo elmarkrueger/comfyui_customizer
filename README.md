@@ -44,8 +44,22 @@ This repository contains a standalone custom node pack for ComfyUI Nodes 2.0.
 
 - GET /api/duffy/theme_fonts
   - Returns available fonts from the fonts directory
+- POST /api/duffy/theme_fonts
+  - Uploads one custom font file using multipart/form-data with field name font
+  - Supported formats: .ttf, .otf, .woff, .woff2
+  - Max upload size: 5 MB per file
+- DELETE /api/duffy/theme_fonts/{filename}
+  - Deletes one custom font file from the fonts directory
 - /custom_theme_fonts/*
   - Static route for font file delivery
+
+## Custom Font Workflow
+
+- In the Theme Control Panel, use Upload Font to add a font file to the local fonts directory.
+- Uploaded fonts are discovered immediately and appear in the Font Family dropdown.
+- Use the delete control in the panel to remove a custom font.
+- If a deleted font is currently selected, the panel falls back to the default family (Arial).
+- Custom fonts are local-only: preset export/import stores the font family name, not the font file binary.
 
 ## Notes
 

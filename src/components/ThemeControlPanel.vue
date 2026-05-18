@@ -23,6 +23,45 @@
           </select>
         </div>
 
+        <div class="control-row">
+          <label>Custom Font Files</label>
+          <div class="inline-controls">
+            <button class="action-button" type="button" :disabled="isUploadingFont" @click="openFontUploadDialog">
+              {{ isUploadingFont ? "Uploading..." : "Upload Font" }}
+            </button>
+            <input
+              ref="fontUploadInput"
+              class="hidden-input"
+              type="file"
+              accept=".ttf,.otf,.woff,.woff2"
+              @change="onFontUploadFile"
+            />
+          </div>
+          <p v-if="fontFeedbackError" class="feedback-text feedback-error">{{ fontFeedbackError }}</p>
+          <p v-else-if="fontFeedbackInfo" class="feedback-text feedback-info">{{ fontFeedbackInfo }}</p>
+        </div>
+
+        <div class="control-row">
+          <label>Installed Custom Fonts</label>
+          <div v-if="customFonts.length > 0" class="font-list">
+            <div v-for="font in customFonts" :key="font.filename" class="font-item">
+              <div class="font-meta">
+                <span class="font-family">{{ font.fontFamily }}</span>
+                <span class="font-file">{{ font.filename }}</span>
+              </div>
+              <button
+                class="action-button compact-button"
+                type="button"
+                :disabled="isUploadingFont || deletingFontFilename === font.filename"
+                @click="onDeleteFont(font)"
+              >
+                {{ deletingFontFilename === font.filename ? "Deleting..." : "Delete" }}
+              </button>
+            </div>
+          </div>
+          <p v-else class="font-empty">No custom fonts found in the fonts folder.</p>
+        </div>
+
         <div class="control-row slider-row">
           <label>Body Text Size</label>
           <input
@@ -63,6 +102,34 @@
             @input="emitChange"
           />
           <span>{{ state.uiMeta.textareaFontSize }}px</span>
+        </div>
+
+        <div class="control-row slider-row">
+          <label>IO Label Size</label>
+          <input
+            v-model.number="state.uiMeta.ioTextSize"
+            class="control-input"
+            type="range"
+            min="8"
+            max="40"
+            step="1"
+            @input="emitChange"
+          />
+          <span>{{ state.uiMeta.ioTextSize }}px</span>
+        </div>
+
+        <div class="control-row slider-row">
+          <label>Connection Point Size</label>
+          <input
+            v-model.number="state.uiMeta.slotPointSize"
+            class="control-input"
+            type="range"
+            min="6"
+            max="26"
+            step="1"
+            @input="emitChange"
+          />
+          <span>{{ state.uiMeta.slotPointSize }}px</span>
         </div>
 
         <div class="control-grid">
@@ -209,14 +276,28 @@ import {
   serializeThemeState,
   type ThemePanelState,
 } from "../modules/state-sync";
-import { ensureFontLoaded, getAvailableFontFamilies, refreshFontCatalog } from "../modules/typography-manager";
+import {
+  deleteThemeFont,
+  ensureFontLoaded,
+  getAvailableFontFamilies,
+  getCustomFonts,
+  refreshFontCatalog,
+  uploadThemeFont,
+  type ThemeFontRecord,
+} from "../modules/typography-manager";
 
 const props = defineProps<{ onChange?: (json: string) => void }>();
 
 const state = ref<ThemePanelState>(sanitizeThemeState(DEFAULT_THEME_PANEL_STATE));
 const fontFamilies = ref<string[]>(getAvailableFontFamilies());
+const customFonts = ref<ThemeFontRecord[]>(getCustomFonts());
 const newPresetName = ref("");
 const presetImportInput = ref<HTMLInputElement | null>(null);
+const fontUploadInput = ref<HTMLInputElement | null>(null);
+const isUploadingFont = ref(false);
+const deletingFontFilename = ref<string | null>(null);
+const fontFeedbackInfo = ref("");
+const fontFeedbackError = ref("");
 
 const uiColorFields: Array<{ key: "contentTextColor" | "titleTextColor" | "ioTextColor" | "bgColor" | "titleBgColor" | "outlineColor"; label: string }> = [
   { key: "contentTextColor", label: "Content Text" },
@@ -303,7 +384,7 @@ const previewTextStyle = computed(() => ({
 
 const previewSubtextStyle = computed(() => ({
   color: state.value.uiMeta.ioTextColor,
-  fontSize: `${Math.max(8, state.value.uiMeta.bodyFontSize - 2)}px`,
+  fontSize: `${state.value.uiMeta.ioTextSize}px`,
 }));
 
 function serialise(): string {
@@ -324,6 +405,84 @@ function emitChange(): void {
 async function onFontFamilyChange(): Promise<void> {
   await ensureFontLoaded(state.value.uiMeta.fontFamily);
   emitChange();
+}
+
+function openFontUploadDialog(): void {
+  if (isUploadingFont.value) {
+    return;
+  }
+
+  fontUploadInput.value?.click();
+}
+
+async function onFontUploadFile(event: Event): Promise<void> {
+  const target = event.target as HTMLInputElement | null;
+  const file = target?.files?.[0];
+  if (target) {
+    target.value = "";
+  }
+
+  if (!file || isUploadingFont.value) {
+    return;
+  }
+
+  isUploadingFont.value = true;
+  fontFeedbackInfo.value = "";
+  fontFeedbackError.value = "";
+
+  const result = await uploadThemeFont(file);
+  await refreshFonts();
+
+  if (!result.ok) {
+    fontFeedbackError.value = result.error ?? "Failed to upload font.";
+    isUploadingFont.value = false;
+    return;
+  }
+
+  if (result.fontFamily) {
+    state.value.uiMeta.fontFamily = result.fontFamily;
+    await ensureFontLoaded(result.fontFamily);
+    emitChange();
+  }
+
+  fontFeedbackInfo.value = result.fontFamily
+    ? `Uploaded ${file.name} as ${result.fontFamily}.`
+    : `Uploaded ${file.name}.`;
+  isUploadingFont.value = false;
+}
+
+async function onDeleteFont(font: ThemeFontRecord): Promise<void> {
+  if (deletingFontFilename.value) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete custom font file "${font.filename}"?`);
+  if (!confirmed) {
+    return;
+  }
+
+  deletingFontFilename.value = font.filename;
+  fontFeedbackInfo.value = "";
+  fontFeedbackError.value = "";
+
+  const wasActiveFont = state.value.uiMeta.fontFamily === font.fontFamily;
+  const result = await deleteThemeFont(font.filename);
+  await refreshFonts();
+
+  if (!result.ok) {
+    fontFeedbackError.value = result.error ?? "Failed to delete font.";
+    deletingFontFilename.value = null;
+    return;
+  }
+
+  if (wasActiveFont) {
+    state.value.uiMeta.fontFamily = DEFAULT_THEME_PANEL_STATE.uiMeta.fontFamily;
+    await ensureFontLoaded(state.value.uiMeta.fontFamily);
+    emitChange();
+  }
+
+  fontFeedbackInfo.value = `Deleted ${font.filename}.`;
+  deletingFontFilename.value = null;
 }
 
 async function onPresetSelect(): Promise<void> {
@@ -403,6 +562,7 @@ function resetDefaults(): void {
 
 async function refreshFonts(): Promise<void> {
   fontFamilies.value = await refreshFontCatalog();
+  customFonts.value = getCustomFonts();
 }
 
 function cleanup(): void {
@@ -546,6 +706,58 @@ defineExpose({ serialise, deserialise, cleanup });
   gap: 8px;
 }
 
+.feedback-text {
+  margin: 0;
+  font-size: 11px;
+}
+
+.feedback-error {
+  color: #ff8b8b;
+}
+
+.feedback-info {
+  color: #8cf2d2;
+}
+
+.font-list {
+  display: grid;
+  gap: 6px;
+}
+
+.font-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(182, 208, 224, 0.2);
+  border-radius: 6px;
+  background: rgba(10, 14, 20, 0.72);
+}
+
+.font-meta {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.font-family {
+  font-size: 12px;
+  color: #e8f4f8;
+}
+
+.font-file {
+  font-size: 10px;
+  color: #9fb2c2;
+  word-break: break-all;
+}
+
+.font-empty {
+  margin: 0;
+  font-size: 11px;
+  color: #9fb2c2;
+}
+
 .action-button,
 .reset-button {
   border: 1px solid rgba(147, 170, 184, 0.4);
@@ -558,9 +770,21 @@ defineExpose({ serialise, deserialise, cleanup });
   letter-spacing: 0.03em;
 }
 
+.compact-button {
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
 .action-button:hover,
 .reset-button:hover {
   border-color: rgba(135, 243, 206, 0.65);
+}
+
+.action-button:disabled,
+.reset-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: rgba(147, 170, 184, 0.24);
 }
 
 .hidden-input {

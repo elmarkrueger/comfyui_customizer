@@ -108,6 +108,29 @@ const SLOT_TEXT_SUFFIXES = [
   " [data-slot=\"slot\"] label",
 ];
 
+const SLOT_POINT_SIZE_SUFFIXES = [
+  " .node-slot-handle",
+  " .node-slot-dot",
+  " .slot-handle",
+  " .slot-dot",
+  " .slot_input",
+  " .slot_output",
+  " .slot_in",
+  " .slot_out",
+  " .lg-slot > .slot",
+  " [data-slot=\"slot\"] > .slot",
+];
+
+const SLOT_POINT_PSEUDO_SUFFIXES = [
+  " .node-slot-handle::before",
+  " .node-slot-dot::before",
+  " .slot-handle::before",
+  " .slot-dot::before",
+  " .slot::before",
+  " .lg-slot::before",
+  " [data-slot=\"slot\"]::before",
+];
+
 const SLOT_SELECTOR_SUFFIXES = [
   ".lg-slot",
   "[data-slot]",
@@ -173,15 +196,46 @@ function compileSlotCss(state: ThemePanelState): string {
   const slotMap = state.nodeSlot;
   for (const key of Object.keys(slotMap) as SlotKey[]) {
     const slotColor = slotMap[key];
+    const typeSelector = `.slot-dot[style*="--color-datatype-${key}"]`;
+
     lines.push(`
 ${slotSelectorsFor(key)} {
   border-color: ${slotColor} !important;
   color: ${slotColor} !important;
   fill: ${slotColor} !important;
   background-color: ${slotColor} !important;
+}
+
+${typeSelector} {
+  background-color: ${slotColor} !important;
+  border-color: ${slotColor} !important;
 }`);
   }
   return lines.join("\n");
+}
+
+function compileSlotPointSizeCss(pointSize: number): string {
+  const pointSelector = expandRootSuffixes(SLOT_POINT_SIZE_SUFFIXES);
+  const pseudoPointSelector = expandRootSuffixes(SLOT_POINT_PSEUDO_SUFFIXES);
+
+  return `
+${pointSelector} {
+  --duffy-slot-point-size: ${pointSize}px !important;
+  width: var(--duffy-slot-point-size) !important;
+  height: var(--duffy-slot-point-size) !important;
+  min-width: var(--duffy-slot-point-size) !important;
+  min-height: var(--duffy-slot-point-size) !important;
+  border-radius: 999px !important;
+}
+
+${pseudoPointSelector} {
+  width: var(--duffy-slot-point-size) !important;
+  height: var(--duffy-slot-point-size) !important;
+  min-width: var(--duffy-slot-point-size) !important;
+  min-height: var(--duffy-slot-point-size) !important;
+  border-radius: 999px !important;
+}
+`;
 }
 
 function compileOutlineCss(state: ThemePanelState): string {
@@ -264,6 +318,8 @@ function compileCss(state: ThemePanelState): string {
 body,
 .dark-theme {
   --comfy-textarea-font-size: ${ui.textareaFontSize}px !important;
+  --duffy-slot-point-size: ${ui.slotPointSize}px !important;
+  --duffy-slot-font-size: ${ui.ioTextSize}px !important;
   --component-node-foreground: ${litegraphBase.NODE_TEXT_COLOR} !important;
   --component-node-foreground-secondary: ${litegraphBase.WIDGET_SECONDARY_TEXT_COLOR} !important;
   --component-node-background: ${litegraphBase.NODE_DEFAULT_BGCOLOR} !important;
@@ -329,6 +385,7 @@ ${expandRootSuffixes([" .text-node-component-header-icon"])} {
 
 ${slotTextSelector} {
   color: ${ui.ioTextColor} !important;
+  font-size: ${ui.ioTextSize}px !important;
 }
 
 ${expandRootSuffixes([" [data-slot=\"content\"] .text-node-component-slot-text"])} {
@@ -376,6 +433,8 @@ svg polyline {
 }
 
 ${compileSlotCss(state)}
+
+${compileSlotPointSizeCss(ui.slotPointSize)}
 
 ${compileOutlineCss(state)}
 `;
