@@ -1,0 +1,6 @@
+node_modules/
+*.log
+web/js/*.map
+knowledge
+plans
+ideas

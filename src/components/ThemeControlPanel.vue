@@ -1,0 +1,574 @@
+<template>
+  <div class="theme-panel-root">
+    <header class="panel-header">
+      <h3>Theme Control Panel v2</h3>
+      <p>Expanded Nodes 2.0 palette, typography and presets</p>
+    </header>
+
+    <section class="preview-card" :style="previewCardStyle">
+      <div class="preview-header" :style="previewHeaderStyle">Preview Node</div>
+      <div class="preview-content">
+        <span :style="previewTextStyle">Widget text</span>
+        <span class="preview-subtext" :style="previewSubtextStyle">Secondary text</span>
+      </div>
+    </section>
+
+    <details open class="panel-section">
+      <summary>Typography and Core Visuals</summary>
+      <div class="section-body">
+        <div class="control-row">
+          <label>Font Family</label>
+          <select v-model="state.uiMeta.fontFamily" class="control-input" @change="onFontFamilyChange">
+            <option v-for="fontFamily in fontFamilies" :key="fontFamily" :value="fontFamily">{{ fontFamily }}</option>
+          </select>
+        </div>
+
+        <div class="control-row slider-row">
+          <label>Body Text Size</label>
+          <input
+            v-model.number="state.uiMeta.bodyFontSize"
+            class="control-input"
+            type="range"
+            min="8"
+            max="56"
+            step="1"
+            @input="emitChange"
+          />
+          <span>{{ state.uiMeta.bodyFontSize }}px</span>
+        </div>
+
+        <div class="control-row slider-row">
+          <label>Header Text Size</label>
+          <input
+            v-model.number="state.uiMeta.titleFontSize"
+            class="control-input"
+            type="range"
+            min="8"
+            max="72"
+            step="1"
+            @input="emitChange"
+          />
+          <span>{{ state.uiMeta.titleFontSize }}px</span>
+        </div>
+
+        <div class="control-row slider-row">
+          <label>Textarea Size</label>
+          <input
+            v-model.number="state.uiMeta.textareaFontSize"
+            class="control-input"
+            type="range"
+            min="8"
+            max="56"
+            step="1"
+            @input="emitChange"
+          />
+          <span>{{ state.uiMeta.textareaFontSize }}px</span>
+        </div>
+
+        <div class="control-grid">
+          <div v-for="field in uiColorFields" :key="field.key" class="control-row color-row">
+            <label>{{ field.label }}</label>
+            <input
+              v-model="state.uiMeta[field.key]"
+              class="control-input color-input"
+              type="color"
+              @input="emitChange"
+            />
+          </div>
+        </div>
+
+        <div class="control-row">
+          <label>Outline Effect</label>
+          <select v-model="state.uiMeta.outlineEffect" class="control-input" @change="emitChange">
+            <option value="solid">Solid Border</option>
+            <option value="static-glow">Static Glow</option>
+            <option value="pulsing-glow">Pulsing Glow</option>
+            <option value="scanline">Scanline</option>
+          </select>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel-section">
+      <summary>Litegraph Base</summary>
+      <div class="section-body">
+        <div class="control-grid">
+          <div v-for="field in litegraphColorFields" :key="field.key" class="control-row color-row">
+            <label>{{ field.label }}</label>
+            <input
+              v-model="state.litegraphBase[field.key]"
+              class="control-input color-input"
+              type="color"
+              @input="emitChange"
+            />
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel-section">
+      <summary>Comfy Base</summary>
+      <div class="section-body">
+        <div class="control-grid">
+          <div v-for="field in comfyColorFields" :key="field.key" class="control-row color-row">
+            <label>{{ field.label }}</label>
+            <input
+              v-model="state.comfyBase[field.key]"
+              class="control-input color-input"
+              type="color"
+              @input="emitChange"
+            />
+          </div>
+        </div>
+
+        <div class="control-row">
+          <label>Bar Shadow</label>
+          <input v-model="state.comfyBase.barShadow" class="control-input" type="text" @input="emitChange" />
+        </div>
+      </div>
+    </details>
+
+    <details class="panel-section">
+      <summary>Node Slot Colors</summary>
+      <div class="section-body">
+        <div class="control-grid slot-grid">
+          <div v-for="field in slotColorFields" :key="field.key" class="control-row color-row">
+            <label>{{ field.label }}</label>
+            <input
+              v-model="state.nodeSlot[field.key]"
+              class="control-input color-input"
+              type="color"
+              @input="emitChange"
+            />
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel-section">
+      <summary>Presets</summary>
+      <div class="section-body">
+        <div class="control-row">
+          <label>Active Preset</label>
+          <select v-model="activePresetSelection" class="control-input" @change="onPresetSelect">
+            <option value="">No preset</option>
+            <option v-for="preset in presetOptions" :key="preset.id" :value="preset.id">
+              {{ preset.name }} ({{ preset.source }})
+            </option>
+          </select>
+        </div>
+
+        <div class="inline-controls">
+          <input
+            v-model="newPresetName"
+            class="control-input"
+            type="text"
+            placeholder="Preset name"
+            @keydown.enter.prevent="savePreset"
+          />
+          <button class="action-button" type="button" @click="savePreset">Save Current</button>
+        </div>
+
+        <div class="inline-controls">
+          <button class="action-button" type="button" @click="removePreset">Delete Selected Custom</button>
+          <button class="action-button" type="button" @click="exportPresets">Export Custom Presets</button>
+          <button class="action-button" type="button" @click="openImportDialog">Import Presets</button>
+          <input
+            ref="presetImportInput"
+            class="hidden-input"
+            type="file"
+            accept="application/json,.json"
+            @change="onPresetImportFile"
+          />
+        </div>
+      </div>
+    </details>
+
+    <footer class="panel-footer">
+      <button class="reset-button" type="button" @click="resetDefaults">Reset All</button>
+    </footer>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+
+import { scheduleThemeApply } from "../modules/css-style-injector";
+import {
+  DEFAULT_THEME_PANEL_STATE,
+  applyPresetSnapshot,
+  deserializeThemeState,
+  importCustomPresets,
+  listPresetOptions,
+  mergeImportedPresets,
+  removeCustomPreset,
+  resolvePreset,
+  sanitizeThemeState,
+  saveCustomPreset,
+  serializeCustomPresets,
+  serializeThemeState,
+  type ThemePanelState,
+} from "../modules/state-sync";
+import { ensureFontLoaded, getAvailableFontFamilies, refreshFontCatalog } from "../modules/typography-manager";
+
+const props = defineProps<{ onChange?: (json: string) => void }>();
+
+const state = ref<ThemePanelState>(sanitizeThemeState(DEFAULT_THEME_PANEL_STATE));
+const fontFamilies = ref<string[]>(getAvailableFontFamilies());
+const newPresetName = ref("");
+const presetImportInput = ref<HTMLInputElement | null>(null);
+
+const uiColorFields: Array<{ key: "contentTextColor" | "titleTextColor" | "ioTextColor" | "bgColor" | "titleBgColor" | "outlineColor"; label: string }> = [
+  { key: "contentTextColor", label: "Content Text" },
+  { key: "titleTextColor", label: "Title Text" },
+  { key: "ioTextColor", label: "IO Label Text" },
+  { key: "bgColor", label: "Node Background" },
+  { key: "titleBgColor", label: "Header Background" },
+  { key: "outlineColor", label: "Outline Color" },
+];
+
+const litegraphColorFields: Array<{ key: keyof ThemePanelState["litegraphBase"]; label: string }> = [
+  { key: "NODE_TITLE_COLOR", label: "Node Title" },
+  { key: "NODE_SELECTED_TITLE_COLOR", label: "Selected Title" },
+  { key: "NODE_TEXT_COLOR", label: "Node Text" },
+  { key: "NODE_DEFAULT_COLOR", label: "Node Header" },
+  { key: "NODE_DEFAULT_BGCOLOR", label: "Node Body" },
+  { key: "NODE_DEFAULT_BOXCOLOR", label: "Node Box" },
+  { key: "NODE_BOX_OUTLINE_COLOR", label: "Node Outline" },
+  { key: "NODE_BYPASS_BGCOLOR", label: "Bypass Background" },
+  { key: "WIDGET_BGCOLOR", label: "Widget Background" },
+  { key: "WIDGET_OUTLINE_COLOR", label: "Widget Outline" },
+  { key: "WIDGET_TEXT_COLOR", label: "Widget Text" },
+  { key: "WIDGET_SECONDARY_TEXT_COLOR", label: "Widget Secondary Text" },
+  { key: "WIDGET_DISABLED_TEXT_COLOR", label: "Widget Disabled Text" },
+  { key: "LINK_COLOR", label: "Link Color" },
+  { key: "EVENT_LINK_COLOR", label: "Event Link" },
+  { key: "CONNECTING_LINK_COLOR", label: "Connecting Link" },
+  { key: "BADGE_FG_COLOR", label: "Badge Foreground" },
+  { key: "BADGE_BG_COLOR", label: "Badge Background" },
+];
+
+const comfyColorFields: Array<{ key: "fgColor" | "bgColor" | "menuBg" | "inputBg" | "inputText" | "descriptionText" | "errorText" | "borderColor"; label: string }> = [
+  { key: "fgColor", label: "Foreground" },
+  { key: "bgColor", label: "Background" },
+  { key: "menuBg", label: "Menu Background" },
+  { key: "inputBg", label: "Input Background" },
+  { key: "inputText", label: "Input Text" },
+  { key: "descriptionText", label: "Description Text" },
+  { key: "errorText", label: "Error Text" },
+  { key: "borderColor", label: "Border Color" },
+];
+
+const slotColorFields: Array<{ key: keyof ThemePanelState["nodeSlot"]; label: string }> = [
+  { key: "IMAGE", label: "IMAGE" },
+  { key: "LATENT", label: "LATENT" },
+  { key: "CONDITIONING", label: "CONDITIONING" },
+  { key: "MASK", label: "MASK" },
+  { key: "MODEL", label: "MODEL" },
+  { key: "VAE", label: "VAE" },
+  { key: "CLIP", label: "CLIP" },
+  { key: "CONTROL_NET", label: "CONTROL_NET" },
+  { key: "SAMPLER", label: "SAMPLER" },
+  { key: "SIGMAS", label: "SIGMAS" },
+  { key: "NOISE", label: "NOISE" },
+  { key: "GUIDER", label: "GUIDER" },
+];
+
+const presetOptions = computed(() => listPresetOptions(state.value));
+
+const activePresetSelection = computed({
+  get: () => state.value.uiMeta.activePresetId ?? "",
+  set: (value: string) => {
+    state.value.uiMeta.activePresetId = value || null;
+  },
+});
+
+const previewCardStyle = computed(() => ({
+  backgroundColor: state.value.uiMeta.bgColor,
+  borderColor: state.value.uiMeta.outlineColor,
+  color: state.value.uiMeta.contentTextColor,
+  fontFamily: state.value.uiMeta.fontFamily,
+}));
+
+const previewHeaderStyle = computed(() => ({
+  backgroundColor: state.value.uiMeta.titleBgColor,
+  color: state.value.uiMeta.titleTextColor,
+  fontSize: `${state.value.uiMeta.titleFontSize}px`,
+}));
+
+const previewTextStyle = computed(() => ({
+  color: state.value.uiMeta.contentTextColor,
+  fontSize: `${state.value.uiMeta.bodyFontSize}px`,
+}));
+
+const previewSubtextStyle = computed(() => ({
+  color: state.value.uiMeta.ioTextColor,
+  fontSize: `${Math.max(8, state.value.uiMeta.bodyFontSize - 2)}px`,
+}));
+
+function serialise(): string {
+  return serializeThemeState(state.value);
+}
+
+function deserialise(json: string): void {
+  state.value = deserializeThemeState(json);
+  scheduleThemeApply(state.value);
+}
+
+function emitChange(): void {
+  state.value = sanitizeThemeState(state.value);
+  scheduleThemeApply(state.value);
+  props.onChange?.(serialise());
+}
+
+async function onFontFamilyChange(): Promise<void> {
+  await ensureFontLoaded(state.value.uiMeta.fontFamily);
+  emitChange();
+}
+
+async function onPresetSelect(): Promise<void> {
+  const presetId = state.value.uiMeta.activePresetId;
+  if (!presetId) {
+    emitChange();
+    return;
+  }
+
+  const resolved = resolvePreset(state.value, presetId);
+  if (!resolved) {
+    emitChange();
+    return;
+  }
+
+  state.value = applyPresetSnapshot(state.value, resolved.snapshot, resolved.id);
+  await ensureFontLoaded(state.value.uiMeta.fontFamily);
+  emitChange();
+}
+
+function savePreset(): void {
+  if (!newPresetName.value.trim()) {
+    return;
+  }
+
+  state.value = saveCustomPreset(state.value, newPresetName.value);
+  newPresetName.value = "";
+  emitChange();
+}
+
+function removePreset(): void {
+  const activeId = state.value.uiMeta.activePresetId;
+  if (!activeId || !activeId.startsWith("custom-")) {
+    return;
+  }
+
+  state.value = removeCustomPreset(state.value, activeId);
+  emitChange();
+}
+
+function exportPresets(): void {
+  const json = serializeCustomPresets(state.value);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "duffy-theme-presets.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function openImportDialog(): void {
+  presetImportInput.value?.click();
+}
+
+async function onPresetImportFile(event: Event): Promise<void> {
+  const target = event.target as HTMLInputElement | null;
+  const file = target?.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  const raw = await file.text();
+  const imported = importCustomPresets(raw);
+  if (imported.length < 1) {
+    return;
+  }
+
+  state.value = mergeImportedPresets(state.value, imported);
+  emitChange();
+}
+
+function resetDefaults(): void {
+  state.value = sanitizeThemeState(DEFAULT_THEME_PANEL_STATE);
+  void onFontFamilyChange();
+}
+
+async function refreshFonts(): Promise<void> {
+  fontFamilies.value = await refreshFontCatalog();
+}
+
+function cleanup(): void {
+  // Placeholder for future listener cleanup hooks.
+}
+
+onMounted(async () => {
+  await refreshFonts();
+  await ensureFontLoaded(state.value.uiMeta.fontFamily);
+  scheduleThemeApply(state.value);
+});
+
+onBeforeUnmount(() => {
+  cleanup();
+});
+
+defineExpose({ serialise, deserialise, cleanup });
+</script>
+
+<style scoped>
+.theme-panel-root {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto auto auto auto auto auto auto;
+  gap: 10px;
+  padding: 10px;
+  color: #ececec;
+  background:
+    radial-gradient(120% 80% at 12% 0%, rgba(31, 199, 157, 0.22), transparent 62%),
+    linear-gradient(150deg, rgba(23, 29, 36, 0.96), rgba(17, 20, 25, 0.96));
+  border: 1px solid rgba(0, 209, 143, 0.3);
+  border-radius: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+}
+
+.panel-header p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #9db2c2;
+}
+
+.preview-card {
+  border: 1px solid;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.preview-header {
+  padding: 6px 8px;
+  font-weight: 600;
+}
+
+.preview-content {
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.preview-subtext {
+  opacity: 0.82;
+}
+
+.panel-section {
+  border: 1px solid rgba(129, 149, 164, 0.24);
+  border-radius: 8px;
+  background: rgba(18, 24, 32, 0.72);
+  overflow: hidden;
+}
+
+.panel-section summary {
+  cursor: pointer;
+  padding: 8px;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #8cf2d2;
+  user-select: none;
+}
+
+.section-body {
+  padding: 0 8px 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.control-row {
+  display: grid;
+  gap: 4px;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.slot-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.control-row label {
+  font-size: 11px;
+  color: #c3d6e4;
+}
+
+.control-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(182, 208, 224, 0.2);
+  border-radius: 6px;
+  background: rgba(8, 12, 18, 0.7);
+  color: #ecf4fa;
+  padding: 6px 8px;
+}
+
+.control-input[type="range"] {
+  padding: 0;
+}
+
+.slider-row span {
+  font-size: 11px;
+  color: #9fb2c2;
+}
+
+.color-input {
+  padding: 0;
+  min-height: 30px;
+}
+
+.inline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-button,
+.reset-button {
+  border: 1px solid rgba(147, 170, 184, 0.4);
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(34, 43, 54, 0.95), rgba(25, 34, 44, 0.95));
+  color: #eff7fa;
+  cursor: pointer;
+  padding: 7px 10px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.action-button:hover,
+.reset-button:hover {
+  border-color: rgba(135, 243, 206, 0.65);
+}
+
+.hidden-input {
+  display: none;
+}
+
+.panel-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+</style>
