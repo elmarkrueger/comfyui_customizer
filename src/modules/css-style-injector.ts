@@ -42,8 +42,6 @@ const NODE_OUTLINE_TARGETS = [
   ".border-node-component-outline",
   ".outline-node-component-outline",
   ".border-node-component-border",
-  ".comfy-node",
-  ".lg-node",
   ".litegraph .lgraphnode > .nodebg",
   ".litegraph .graph-node > .nodebg",
 ];
@@ -113,12 +111,6 @@ const SLOT_POINT_SIZE_SUFFIXES = [
   " .node-slot-dot",
   " .slot-handle",
   " .slot-dot",
-  " .slot_input",
-  " .slot_output",
-  " .slot_in",
-  " .slot_out",
-  " .lg-slot > .slot",
-  " [data-slot=\"slot\"] > .slot",
 ];
 
 const SLOT_POINT_PSEUDO_SUFFIXES = [
@@ -126,9 +118,6 @@ const SLOT_POINT_PSEUDO_SUFFIXES = [
   " .node-slot-dot::before",
   " .slot-handle::before",
   " .slot-dot::before",
-  " .slot::before",
-  " .lg-slot::before",
-  " [data-slot=\"slot\"]::before",
 ];
 
 const SLOT_SELECTOR_SUFFIXES = [
@@ -244,9 +233,7 @@ function compileOutlineCss(state: ThemePanelState): string {
     case "solid":
       return `
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
-  box-shadow: 0 0 0 1px ${outlineColor} !important;
+  box-shadow: inset 0 0 0 1px ${outlineColor} !important;
   animation: none !important;
 }
 `;
@@ -254,9 +241,7 @@ ${NODE_OUTLINE_SELECTOR} {
     case "static-glow":
       return `
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
-  box-shadow: 0 0 0 1px ${outlineColor}, 0 0 14px 2px ${outlineColor} !important;
+  box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 14px 2px ${outlineColor} !important;
   animation: none !important;
 }
 `;
@@ -264,13 +249,11 @@ ${NODE_OUTLINE_SELECTOR} {
     case "pulsing-glow":
       return `
 @keyframes duffyThemePulse {
-  0% { box-shadow: 0 0 0 1px ${outlineColor}, 0 0 6px 1px ${outlineColor}; }
-  100% { box-shadow: 0 0 0 1px ${outlineColor}, 0 0 20px 5px ${outlineColor}; }
+  0% { box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 6px 1px ${outlineColor}; }
+  100% { box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 20px 5px ${outlineColor}; }
 }
 
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
   animation: duffyThemePulse 1.8s ease-in-out infinite alternate !important;
 }
 `;
@@ -279,19 +262,17 @@ ${NODE_OUTLINE_SELECTOR} {
       return `
 @keyframes duffyThemeScanline {
   0% {
-    box-shadow: 0 0 0 1px ${outlineColor}, 0 -10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
+    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 -10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
   }
   50% {
-    box-shadow: 0 0 0 1px ${outlineColor}, 0 0 16px -8px ${outlineColor}, 0 0 12px 2px ${outlineColor}66;
+    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 16px -8px ${outlineColor}, 0 0 12px 2px ${outlineColor}66;
   }
   100% {
-    box-shadow: 0 0 0 1px ${outlineColor}, 0 10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
+    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
   }
 }
 
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
   animation: duffyThemeScanline 1.4s linear infinite !important;
 }
 `;

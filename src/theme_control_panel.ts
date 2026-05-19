@@ -162,12 +162,7 @@ comfyApp.registerExtension({
     const instance = vueApp.mount(container) as any;
 
     const domWidget = node.addDOMWidget("theme_panel_ui", "custom", container, { serialize: false });
-    domWidget.computeSize = () => {
-      const currentWidth = Array.isArray(node.size) ? Number(node.size[0]) : MIN_W;
-      const currentHeight = Array.isArray(node.size) ? Number(node.size[1]) : MIN_H;
-
-      return [Math.max(MIN_W, currentWidth), Math.max(MIN_H, currentHeight)];
-    };
+    domWidget.computeSize = () => [MIN_W, MIN_H];
 
     const hydrateFromWidget = (value: unknown) => {
       if (typeof value !== "string" || !value.trim()) {
@@ -200,13 +195,6 @@ comfyApp.registerExtension({
         originalWidgetCallback?.apply(this, arguments);
       };
     }
-
-    const originalOnResize = node.onResize;
-    node.onResize = function onResize(size: [number, number]) {
-      size[0] = Math.max(MIN_W, size[0]);
-      size[1] = Math.max(MIN_H, size[1]);
-      originalOnResize?.call(this, size);
-    };
 
     const initialWidth = Array.isArray(node.size) ? Number(node.size[0]) : MIN_W;
     const initialHeight = Array.isArray(node.size) ? Number(node.size[1]) : MIN_H;

@@ -7362,8 +7362,6 @@ const NODE_OUTLINE_TARGETS = [
   ".border-node-component-outline",
   ".outline-node-component-outline",
   ".border-node-component-border",
-  ".comfy-node",
-  ".lg-node",
   ".litegraph .lgraphnode > .nodebg",
   ".litegraph .graph-node > .nodebg"
 ];
@@ -7425,22 +7423,13 @@ const SLOT_POINT_SIZE_SUFFIXES = [
   " .node-slot-handle",
   " .node-slot-dot",
   " .slot-handle",
-  " .slot-dot",
-  " .slot_input",
-  " .slot_output",
-  " .slot_in",
-  " .slot_out",
-  " .lg-slot > .slot",
-  ' [data-slot="slot"] > .slot'
+  " .slot-dot"
 ];
 const SLOT_POINT_PSEUDO_SUFFIXES = [
   " .node-slot-handle::before",
   " .node-slot-dot::before",
   " .slot-handle::before",
-  " .slot-dot::before",
-  " .slot::before",
-  " .lg-slot::before",
-  ' [data-slot="slot"]::before'
+  " .slot-dot::before"
 ];
 const SLOT_SELECTOR_SUFFIXES = [
   ".lg-slot",
@@ -7541,31 +7530,25 @@ function compileOutlineCss(state) {
     case "solid":
       return `
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
-  box-shadow: 0 0 0 1px ${outlineColor} !important;
+  box-shadow: inset 0 0 0 1px ${outlineColor} !important;
   animation: none !important;
 }
 `;
     case "static-glow":
       return `
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
-  box-shadow: 0 0 0 1px ${outlineColor}, 0 0 14px 2px ${outlineColor} !important;
+  box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 14px 2px ${outlineColor} !important;
   animation: none !important;
 }
 `;
     case "pulsing-glow":
       return `
 @keyframes duffyThemePulse {
-  0% { box-shadow: 0 0 0 1px ${outlineColor}, 0 0 6px 1px ${outlineColor}; }
-  100% { box-shadow: 0 0 0 1px ${outlineColor}, 0 0 20px 5px ${outlineColor}; }
+  0% { box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 6px 1px ${outlineColor}; }
+  100% { box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 20px 5px ${outlineColor}; }
 }
 
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
   animation: duffyThemePulse 1.8s ease-in-out infinite alternate !important;
 }
 `;
@@ -7573,19 +7556,17 @@ ${NODE_OUTLINE_SELECTOR} {
       return `
 @keyframes duffyThemeScanline {
   0% {
-    box-shadow: 0 0 0 1px ${outlineColor}, 0 -10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
+    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 -10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
   }
   50% {
-    box-shadow: 0 0 0 1px ${outlineColor}, 0 0 16px -8px ${outlineColor}, 0 0 12px 2px ${outlineColor}66;
+    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 16px -8px ${outlineColor}, 0 0 12px 2px ${outlineColor}66;
   }
   100% {
-    box-shadow: 0 0 0 1px ${outlineColor}, 0 10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
+    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
   }
 }
 
 ${NODE_OUTLINE_SELECTOR} {
-  border: 1px solid ${outlineColor} !important;
-  outline: 1px solid ${outlineColor} !important;
   animation: duffyThemeScanline 1.4s linear infinite !important;
 }
 `;
@@ -8828,11 +8809,7 @@ app.registerExtension({
     });
     const instance = vueApp.mount(container);
     const domWidget = node.addDOMWidget("theme_panel_ui", "custom", container, { serialize: false });
-    domWidget.computeSize = () => {
-      const currentWidth = Array.isArray(node.size) ? Number(node.size[0]) : MIN_W;
-      const currentHeight = Array.isArray(node.size) ? Number(node.size[1]) : MIN_H;
-      return [Math.max(MIN_W, currentWidth), Math.max(MIN_H, currentHeight)];
-    };
+    domWidget.computeSize = () => [MIN_W, MIN_H];
     const hydrateFromWidget = (value) => {
       if (typeof value !== "string" || !value.trim()) {
         return;
@@ -8860,12 +8837,6 @@ app.registerExtension({
         originalWidgetCallback?.apply(this, arguments);
       };
     }
-    const originalOnResize = node.onResize;
-    node.onResize = function onResize(size) {
-      size[0] = Math.max(MIN_W, size[0]);
-      size[1] = Math.max(MIN_H, size[1]);
-      originalOnResize?.call(this, size);
-    };
     const initialWidth = Array.isArray(node.size) ? Number(node.size[0]) : MIN_W;
     const initialHeight = Array.isArray(node.size) ? Number(node.size[1]) : MIN_H;
     node.setSize([Math.max(MIN_W, initialWidth), Math.max(MIN_H, initialHeight)]);
