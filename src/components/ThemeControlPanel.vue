@@ -216,11 +216,20 @@
       <summary>Presets</summary>
       <div class="section-body">
         <div class="control-row">
+          <label>Preset Category</label>
+          <select v-model="selectedPresetCategory" class="control-input" @change="onPresetCategoryChange">
+            <option v-for="category in presetCategoryOptions" :key="category.id" :value="category.id">
+              {{ category.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="control-row">
           <label>Active Preset</label>
           <select v-model="activePresetSelection" class="control-input" @change="onPresetSelect">
             <option value="">No preset</option>
             <option v-for="preset in presetOptions" :key="preset.id" :value="preset.id">
-              {{ preset.name }} ({{ preset.source }})
+              {{ preset.name }}
             </option>
           </select>
         </div>
@@ -263,9 +272,11 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { scheduleThemeApply } from "../modules/css-style-injector";
 import {
   DEFAULT_THEME_PANEL_STATE,
+  PRESET_CATEGORY_DEFINITIONS,
   applyPresetSnapshot,
   deserializeThemeState,
   importCustomPresets,
+  listPresetCategories,
   listPresetOptions,
   mergeImportedPresets,
   removeCustomPreset,
@@ -274,6 +285,7 @@ import {
   saveCustomPreset,
   serializeCustomPresets,
   serializeThemeState,
+  type PresetCategoryId,
   type ThemePanelState,
 } from "../modules/state-sync";
 import {
@@ -298,6 +310,7 @@ const isUploadingFont = ref(false);
 const deletingFontFilename = ref<string | null>(null);
 const fontFeedbackInfo = ref("");
 const fontFeedbackError = ref("");
+const selectedPresetCategory = ref<PresetCategoryId>(PRESET_CATEGORY_DEFINITIONS[0].id);
 
 const uiColorFields: Array<{ key: "contentTextColor" | "titleTextColor" | "ioTextColor" | "bgColor" | "titleBgColor" | "outlineColor"; label: string }> = [
   { key: "contentTextColor", label: "Content Text" },
@@ -355,14 +368,48 @@ const slotColorFields: Array<{ key: keyof ThemePanelState["nodeSlot"]; label: st
   { key: "GUIDER", label: "GUIDER" },
 ];
 
-const presetOptions = computed(() => listPresetOptions(state.value));
+const presetCategoryOptions = computed(() => listPresetCategories(state.value));
+const allPresetOptions = computed(() => listPresetOptions(state.value));
+const presetOptions = computed(() => listPresetOptions(state.value, selectedPresetCategory.value));
 
 const activePresetSelection = computed({
-  get: () => state.value.uiMeta.activePresetId ?? "",
+  get: () => {
+    const activePresetId = state.value.uiMeta.activePresetId;
+    if (!activePresetId) {
+      return "";
+    }
+
+    const belongsToCategory = presetOptions.value.some((preset) => preset.id === activePresetId);
+    return belongsToCategory ? activePresetId : "";
+  },
   set: (value: string) => {
     state.value.uiMeta.activePresetId = value || null;
   },
 });
+
+function ensurePresetCategoryIsAvailable(): void {
+  const availableCategory = presetCategoryOptions.value.find((category) => (
+    category.id === selectedPresetCategory.value
+  ));
+  if (availableCategory) {
+    return;
+  }
+
+  selectedPresetCategory.value = presetCategoryOptions.value[0]?.id ?? "classic-elegant";
+}
+
+function alignPresetCategoryToActivePreset(): void {
+  const activePresetId = state.value.uiMeta.activePresetId;
+  if (activePresetId) {
+    const activePreset = allPresetOptions.value.find((preset) => preset.id === activePresetId);
+    if (activePreset) {
+      selectedPresetCategory.value = activePreset.category;
+      return;
+    }
+  }
+
+  ensurePresetCategoryIsAvailable();
+}
 
 const previewCardStyle = computed(() => ({
   backgroundColor: state.value.uiMeta.bgColor,
@@ -393,13 +440,19 @@ function serialise(): string {
 
 function deserialise(json: string): void {
   state.value = deserializeThemeState(json);
+  alignPresetCategoryToActivePreset();
   scheduleThemeApply(state.value);
 }
 
 function emitChange(): void {
   state.value = sanitizeThemeState(state.value);
+  ensurePresetCategoryIsAvailable();
   scheduleThemeApply(state.value);
   props.onChange?.(serialise());
+}
+
+function onPresetCategoryChange(): void {
+  ensurePresetCategoryIsAvailable();
 }
 
 async function onFontFamilyChange(): Promise<void> {
@@ -499,6 +552,7 @@ async function onPresetSelect(): Promise<void> {
   }
 
   state.value = applyPresetSnapshot(state.value, resolved.snapshot, resolved.id);
+  selectedPresetCategory.value = resolved.category;
   await ensureFontLoaded(state.value.uiMeta.fontFamily);
   emitChange();
 }
@@ -509,13 +563,19 @@ function savePreset(): void {
   }
 
   state.value = saveCustomPreset(state.value, newPresetName.value);
+  selectedPresetCategory.value = "custom";
   newPresetName.value = "";
   emitChange();
 }
 
 function removePreset(): void {
   const activeId = state.value.uiMeta.activePresetId;
-  if (!activeId || !activeId.startsWith("custom-")) {
+  if (!activeId) {
+    return;
+  }
+
+  const isCustomPreset = state.value.presets.custom.some((preset) => preset.id === activeId);
+  if (!isCustomPreset) {
     return;
   }
 
@@ -552,11 +612,13 @@ async function onPresetImportFile(event: Event): Promise<void> {
   }
 
   state.value = mergeImportedPresets(state.value, imported);
+  selectedPresetCategory.value = "custom";
   emitChange();
 }
 
 function resetDefaults(): void {
   state.value = sanitizeThemeState(DEFAULT_THEME_PANEL_STATE);
+  alignPresetCategoryToActivePreset();
   void onFontFamilyChange();
 }
 
@@ -570,6 +632,7 @@ function cleanup(): void {
 }
 
 onMounted(async () => {
+  alignPresetCategoryToActivePreset();
   await refreshFonts();
   await ensureFontLoaded(state.value.uiMeta.fontFamily);
   scheduleThemeApply(state.value);

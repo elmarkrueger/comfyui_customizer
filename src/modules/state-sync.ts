@@ -14,6 +14,20 @@ export type SlotKey =
   | "NOISE"
   | "GUIDER";
 
+export type PresetCategoryId =
+  | "classic-elegant"
+  | "nature-earth"
+  | "modern-tech"
+  | "pastel-soft"
+  | "vibrant-bold"
+  | "legacy"
+  | "custom";
+
+export interface PresetCategoryDefinition {
+  id: PresetCategoryId;
+  label: string;
+}
+
 export interface ThemeUiMeta {
   fontFamily: string;
   bodyFontSize: number;
@@ -92,7 +106,15 @@ export interface ThemePresetSnapshot {
 export interface ThemePreset {
   id: string;
   name: string;
+  category: PresetCategoryId;
   snapshot: ThemePresetSnapshot;
+}
+
+export interface PresetOption {
+  id: string;
+  name: string;
+  source: "builtin" | "custom";
+  category: PresetCategoryId;
 }
 
 export interface ThemePanelState {
@@ -116,6 +138,20 @@ const FAMILY_RE = /^[a-zA-Z0-9 _-]{1,80}$/;
 const SIMPLE_CSS_COLOR_RE = /^[#(),.%\sa-zA-Z0-9-]{1,96}$/;
 const PRESET_ID_RE = /^[a-z0-9_-]{1,48}$/;
 const MIN_CONTRAST_RATIO = 2.2;
+
+export const PRESET_CATEGORY_DEFINITIONS: PresetCategoryDefinition[] = [
+  { id: "classic-elegant", label: "Classic & Elegant" },
+  { id: "nature-earth", label: "Nature & Earth" },
+  { id: "modern-tech", label: "Modern & Tech" },
+  { id: "pastel-soft", label: "Pastel & Soft" },
+  { id: "vibrant-bold", label: "Vibrant & Bold" },
+  { id: "legacy", label: "Legacy" },
+  { id: "custom", label: "Custom" },
+];
+
+const PRESET_CATEGORY_IDS = new Set<PresetCategoryId>(
+  PRESET_CATEGORY_DEFINITIONS.map((category) => category.id),
+);
 
 const OUTLINE_EFFECTS: Set<OutlineEffect> = new Set([
   "solid",
@@ -218,10 +254,173 @@ export const DEFAULT_THEME_PANEL_STATE: ThemePanelState = {
   },
 };
 
+interface PalettePresetDefinition {
+  id: string;
+  name: string;
+  category: PresetCategoryId;
+  colors: [string, string, string, string, string];
+}
+
+function buildPalettePreset(definition: PalettePresetDefinition): ThemePreset {
+  const [surface, header, panel, accent, accentAlt] = definition.colors;
+  const contentTextColor = ensureReadableColor(accentAlt, surface, DEFAULT_THEME_UI_META.contentTextColor);
+  const titleTextColor = ensureReadableColor(contentTextColor, header, contentTextColor);
+  const ioTextColor = ensureReadableColor(accent, surface, contentTextColor);
+
+  return {
+    id: definition.id,
+    name: definition.name,
+    category: definition.category,
+    snapshot: {
+      uiMeta: {
+        ...DEFAULT_THEME_UI_META,
+        contentTextColor,
+        titleTextColor,
+        ioTextColor,
+        bgColor: surface,
+        titleBgColor: header,
+        outlineColor: accent,
+        activePresetId: definition.id,
+      },
+      litegraphBase: {
+        ...DEFAULT_LITEGRAPH_BASE,
+        NODE_TITLE_COLOR: titleTextColor,
+        NODE_TEXT_COLOR: contentTextColor,
+        NODE_DEFAULT_COLOR: header,
+        NODE_DEFAULT_BGCOLOR: surface,
+        NODE_DEFAULT_BOXCOLOR: panel,
+        NODE_BOX_OUTLINE_COLOR: accent,
+        WIDGET_BGCOLOR: panel,
+        WIDGET_OUTLINE_COLOR: accent,
+        WIDGET_TEXT_COLOR: contentTextColor,
+        WIDGET_SECONDARY_TEXT_COLOR: ioTextColor,
+        LINK_COLOR: accent,
+        EVENT_LINK_COLOR: accentAlt,
+        CONNECTING_LINK_COLOR: accent,
+        BADGE_FG_COLOR: titleTextColor,
+        BADGE_BG_COLOR: header,
+      },
+      comfyBase: {
+        ...DEFAULT_COMFY_BASE,
+        fgColor: contentTextColor,
+        bgColor: surface,
+        menuBg: header,
+        inputBg: panel,
+        inputText: contentTextColor,
+        descriptionText: ioTextColor,
+        borderColor: accent,
+      },
+      nodeSlot: {
+        ...DEFAULT_NODE_SLOT,
+        IMAGE: accent,
+        LATENT: accentAlt,
+        MODEL: panel,
+        CLIP: accentAlt,
+        CONTROL_NET: accent,
+        GUIDER: accentAlt,
+      },
+    },
+  };
+}
+
+const CURATED_NODE_PRESET_PALETTES: PalettePresetDefinition[] = [
+  {
+    id: "builtin-classic-midnight-gold",
+    name: "Midnight Gold",
+    category: "classic-elegant",
+    colors: ["#0B132B", "#1C2541", "#3A506B", "#5BC0BE", "#F9A03F"],
+  },
+  {
+    id: "builtin-classic-monochrome-slate",
+    name: "Monochrome Slate",
+    category: "classic-elegant",
+    colors: ["#121212", "#282828", "#3F3F3F", "#575757", "#717171"],
+  },
+  {
+    id: "builtin-classic-executive-blue",
+    name: "Executive Blue",
+    category: "classic-elegant",
+    colors: ["#003049", "#1D4360", "#2F5F80", "#F77F00", "#FCBF49"],
+  },
+  {
+    id: "builtin-nature-forest-retreat",
+    name: "Forest Retreat",
+    category: "nature-earth",
+    colors: ["#2D4A22", "#4A6B3A", "#5E7A48", "#8A9A5B", "#E1D89F"],
+  },
+  {
+    id: "builtin-nature-terracotta-warmth",
+    name: "Terracotta Warmth",
+    category: "nature-earth",
+    colors: ["#3D405B", "#4A506D", "#5E647A", "#E07A5F", "#F2CC8F"],
+  },
+  {
+    id: "builtin-nature-ocean-breeze",
+    name: "Ocean Breeze",
+    category: "nature-earth",
+    colors: ["#03045E", "#023E8A", "#0077B6", "#00B4D8", "#90E0EF"],
+  },
+  {
+    id: "builtin-modern-cyber-neon",
+    name: "Cyber Neon",
+    category: "modern-tech",
+    colors: ["#050505", "#1B1B1B", "#252525", "#7209B7", "#4CC9F0"],
+  },
+  {
+    id: "builtin-modern-hacker-green",
+    name: "Hacker Green",
+    category: "modern-tech",
+    colors: ["#0D1B2A", "#1B263B", "#27374F", "#415A77", "#E0E1DD"],
+  },
+  {
+    id: "builtin-modern-tech-purple",
+    name: "Tech Purple",
+    category: "modern-tech",
+    colors: ["#10002B", "#240046", "#3C096C", "#5A189A", "#7B2CBF"],
+  },
+  {
+    id: "builtin-pastel-cotton-candy-node",
+    name: "Cotton Candy Node",
+    category: "pastel-soft",
+    colors: ["#2B2735", "#3A3448", "#4A435B", "#CDB4DB", "#A2D2FF"],
+  },
+  {
+    id: "builtin-pastel-muted-spring-node",
+    name: "Muted Spring Node",
+    category: "pastel-soft",
+    colors: ["#2F2A33", "#413846", "#5A4B62", "#D1B3C4", "#E8C2CA"],
+  },
+  {
+    id: "builtin-pastel-sand-stone-node",
+    name: "Sand & Stone Node",
+    category: "pastel-soft",
+    colors: ["#2E2A26", "#3C362F", "#4E473F", "#D5BDAF", "#EDF6F9"],
+  },
+  {
+    id: "builtin-vibrant-sunset-pop-node",
+    name: "Sunset Pop Node",
+    category: "vibrant-bold",
+    colors: ["#1E1F29", "#2A2D3A", "#373B4C", "#FF9F1C", "#8AC926"],
+  },
+  {
+    id: "builtin-vibrant-retro-wave-node",
+    name: "Retro Wave Node",
+    category: "vibrant-bold",
+    colors: ["#181428", "#231A3A", "#32224F", "#F72585", "#4CC9F0"],
+  },
+  {
+    id: "builtin-vibrant-citric-node",
+    name: "Vibrant Citric Node",
+    category: "vibrant-bold",
+    colors: ["#1E2422", "#2B3632", "#3A4A45", "#FF9F1C", "#2EC4B6"],
+  },
+];
+
 export const BUILTIN_PRESETS: ThemePreset[] = [
   {
     id: "builtin-balanced-dark",
     name: "Balanced Dark",
+    category: "legacy",
     snapshot: {
       uiMeta: { ...DEFAULT_THEME_UI_META, activePresetId: "builtin-balanced-dark" },
       litegraphBase: { ...DEFAULT_LITEGRAPH_BASE },
@@ -232,6 +431,7 @@ export const BUILTIN_PRESETS: ThemePreset[] = [
   {
     id: "builtin-high-contrast",
     name: "High Contrast",
+    category: "legacy",
     snapshot: {
       uiMeta: {
         ...DEFAULT_THEME_UI_META,
@@ -269,6 +469,7 @@ export const BUILTIN_PRESETS: ThemePreset[] = [
   {
     id: "builtin-legacy-preview",
     name: "Legacy Preview",
+    category: "legacy",
     snapshot: {
       uiMeta: {
         ...DEFAULT_THEME_UI_META,
@@ -290,6 +491,7 @@ export const BUILTIN_PRESETS: ThemePreset[] = [
       nodeSlot: { ...DEFAULT_NODE_SLOT },
     },
   },
+  ...CURATED_NODE_PRESET_PALETTES.map((definition) => buildPalettePreset(definition)),
 ];
 
 function deepClone<T>(value: T): T {
@@ -383,6 +585,14 @@ function sanitizeOutlineEffect(value: unknown, fallback: OutlineEffect): Outline
 function sanitizePresetId(value: unknown, fallback: string): string {
   const text = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (PRESET_ID_RE.test(text)) {
+    return text;
+  }
+  return fallback;
+}
+
+function sanitizePresetCategory(value: unknown, fallback: PresetCategoryId): PresetCategoryId {
+  const text = typeof value === "string" ? value.trim() as PresetCategoryId : fallback;
+  if (PRESET_CATEGORY_IDS.has(text)) {
     return text;
   }
   return fallback;
@@ -557,13 +767,18 @@ function migrateLegacyState(source: Record<string, unknown>): ThemePanelState {
   return base;
 }
 
-export function sanitizeThemePreset(value: unknown, fallbackIndex = 0): ThemePreset | null {
+export function sanitizeThemePreset(
+  value: unknown,
+  fallbackIndex = 0,
+  fallbackCategory: PresetCategoryId = "custom",
+): ThemePreset | null {
   if (!isRecord(value)) {
     return null;
   }
 
   const id = sanitizePresetId(value.id, `preset_${fallbackIndex + 1}`);
   const name = sanitizePresetName(value.name);
+  const category = sanitizePresetCategory(value.category, fallbackCategory);
   const snapshotSource = isRecord(value.snapshot) ? value.snapshot : value;
 
   const snapshot: ThemePresetSnapshot = {
@@ -573,7 +788,7 @@ export function sanitizeThemePreset(value: unknown, fallbackIndex = 0): ThemePre
     nodeSlot: sanitizeNodeSlot(snapshotSource.nodeSlot),
   };
 
-  return { id, name, snapshot };
+  return { id, name, category, snapshot };
 }
 
 function sanitizeCustomPresets(value: unknown): ThemePreset[] {
@@ -584,12 +799,12 @@ function sanitizeCustomPresets(value: unknown): ThemePreset[] {
   const seen = new Set<string>();
   const sanitized: ThemePreset[] = [];
   for (let index = 0; index < value.length; index += 1) {
-    const preset = sanitizeThemePreset(value[index], index);
+    const preset = sanitizeThemePreset(value[index], index, "custom");
     if (!preset || seen.has(preset.id)) {
       continue;
     }
     seen.add(preset.id);
-    sanitized.push(preset);
+    sanitized.push({ ...preset, category: "custom" });
   }
 
   return sanitized;
@@ -714,6 +929,7 @@ export function saveCustomPreset(state: ThemePanelState, name: string): ThemePan
   const preset: ThemePreset = {
     id: candidateId,
     name: presetName,
+    category: "custom",
     snapshot: toPresetSnapshot(normalized),
   };
 
@@ -745,11 +961,38 @@ export function removeCustomPreset(state: ThemePanelState, presetId: string): Th
   });
 }
 
-export function listPresetOptions(state: ThemePanelState): Array<{ id: string; name: string; source: "builtin" | "custom" }> {
+export function listPresetCategories(state: ThemePanelState): PresetCategoryDefinition[] {
+  const categoryById = new Set(listPresetOptions(state).map((preset) => preset.category));
+  return PRESET_CATEGORY_DEFINITIONS.filter((category) => {
+    if (category.id === "custom") {
+      return true;
+    }
+    return categoryById.has(category.id);
+  });
+}
+
+export function listPresetOptions(
+  state: ThemePanelState,
+  category?: PresetCategoryId,
+): PresetOption[] {
   const normalized = sanitizeThemeState(state);
-  const builtins = BUILTIN_PRESETS.map((preset) => ({ id: preset.id, name: preset.name, source: "builtin" as const }));
-  const custom = normalized.presets.custom.map((preset) => ({ id: preset.id, name: preset.name, source: "custom" as const }));
-  return [...builtins, ...custom];
+  const builtins = BUILTIN_PRESETS.map((preset) => ({
+    id: preset.id,
+    name: preset.name,
+    source: "builtin" as const,
+    category: preset.category,
+  }));
+  const custom = normalized.presets.custom.map((preset) => ({
+    id: preset.id,
+    name: preset.name,
+    source: "custom" as const,
+    category: sanitizePresetCategory(preset.category, "custom"),
+  }));
+  const allOptions = [...builtins, ...custom];
+  if (!category) {
+    return allOptions;
+  }
+  return allOptions.filter((preset) => preset.category === category);
 }
 
 export function resolvePreset(state: ThemePanelState, presetId: string): ThemePreset | null {
@@ -803,7 +1046,7 @@ export function mergeImportedPresets(state: ThemePanelState, imported: ThemePres
   const existing = new Set(merged.map((preset) => preset.id));
 
   for (const preset of imported) {
-    let candidate = preset;
+    let candidate = { ...preset, category: "custom" as const };
     let counter = 2;
     while (existing.has(candidate.id)) {
       candidate = {

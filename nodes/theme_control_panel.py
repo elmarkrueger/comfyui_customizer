@@ -10,6 +10,15 @@ _HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 _FAMILY_RE = re.compile(r"^[a-zA-Z0-9 _-]{1,80}$")
 _SAFE_CSS_RE = re.compile(r"^[#(),.%\sa-zA-Z0-9-]{1,96}$")
 _PRESET_ID_RE = re.compile(r"^[a-z0-9_-]{1,48}$")
+_PRESET_CATEGORIES = {
+    "classic-elegant",
+    "nature-earth",
+    "modern-tech",
+    "pastel-soft",
+    "vibrant-bold",
+    "legacy",
+    "custom",
+}
 _OUTLINE_EFFECTS = {"solid", "static-glow", "pulsing-glow", "scanline"}
 _SLOT_KEYS = [
     "IMAGE",
@@ -145,6 +154,13 @@ def _sanitize_preset_id(value: Any) -> str | None:
     return text if _PRESET_ID_RE.fullmatch(text) else None
 
 
+def _sanitize_preset_category(value: Any, fallback: str) -> str:
+    text = value.strip() if isinstance(value, str) else ""
+    if text in _PRESET_CATEGORIES:
+        return text
+    return fallback
+
+
 def _sanitize_ui_meta(value: Any) -> dict[str, Any]:
     source = value if _is_record(value) else {}
     return {
@@ -277,6 +293,7 @@ def _sanitize_presets(value: Any) -> dict[str, Any]:
             {
                 "id": preset_id,
                 "name": preset_name,
+                "category": _sanitize_preset_category(item.get("category"), "custom"),
                 "snapshot": {
                     "uiMeta": _sanitize_ui_meta(snapshot.get("uiMeta")),
                     "litegraphBase": _sanitize_litegraph_base(snapshot.get("litegraphBase")),

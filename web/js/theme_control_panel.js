@@ -6504,6 +6504,18 @@ const FAMILY_RE$1 = /^[a-zA-Z0-9 _-]{1,80}$/;
 const SIMPLE_CSS_COLOR_RE = /^[#(),.%\sa-zA-Z0-9-]{1,96}$/;
 const PRESET_ID_RE = /^[a-z0-9_-]{1,48}$/;
 const MIN_CONTRAST_RATIO = 2.2;
+const PRESET_CATEGORY_DEFINITIONS = [
+  { id: "classic-elegant", label: "Classic & Elegant" },
+  { id: "nature-earth", label: "Nature & Earth" },
+  { id: "modern-tech", label: "Modern & Tech" },
+  { id: "pastel-soft", label: "Pastel & Soft" },
+  { id: "vibrant-bold", label: "Vibrant & Bold" },
+  { id: "legacy", label: "Legacy" },
+  { id: "custom", label: "Custom" }
+];
+const PRESET_CATEGORY_IDS = new Set(
+  PRESET_CATEGORY_DEFINITIONS.map((category) => category.id)
+);
 const OUTLINE_EFFECTS = /* @__PURE__ */ new Set([
   "solid",
   "static-glow",
@@ -6598,10 +6610,163 @@ const DEFAULT_THEME_PANEL_STATE = {
     custom: []
   }
 };
+function buildPalettePreset(definition) {
+  const [surface, header, panel, accent, accentAlt] = definition.colors;
+  const contentTextColor = ensureReadableColor(accentAlt, surface, DEFAULT_THEME_UI_META.contentTextColor);
+  const titleTextColor = ensureReadableColor(contentTextColor, header, contentTextColor);
+  const ioTextColor = ensureReadableColor(accent, surface, contentTextColor);
+  return {
+    id: definition.id,
+    name: definition.name,
+    category: definition.category,
+    snapshot: {
+      uiMeta: {
+        ...DEFAULT_THEME_UI_META,
+        contentTextColor,
+        titleTextColor,
+        ioTextColor,
+        bgColor: surface,
+        titleBgColor: header,
+        outlineColor: accent,
+        activePresetId: definition.id
+      },
+      litegraphBase: {
+        ...DEFAULT_LITEGRAPH_BASE,
+        NODE_TITLE_COLOR: titleTextColor,
+        NODE_TEXT_COLOR: contentTextColor,
+        NODE_DEFAULT_COLOR: header,
+        NODE_DEFAULT_BGCOLOR: surface,
+        NODE_DEFAULT_BOXCOLOR: panel,
+        NODE_BOX_OUTLINE_COLOR: accent,
+        WIDGET_BGCOLOR: panel,
+        WIDGET_OUTLINE_COLOR: accent,
+        WIDGET_TEXT_COLOR: contentTextColor,
+        WIDGET_SECONDARY_TEXT_COLOR: ioTextColor,
+        LINK_COLOR: accent,
+        EVENT_LINK_COLOR: accentAlt,
+        CONNECTING_LINK_COLOR: accent,
+        BADGE_FG_COLOR: titleTextColor,
+        BADGE_BG_COLOR: header
+      },
+      comfyBase: {
+        ...DEFAULT_COMFY_BASE,
+        fgColor: contentTextColor,
+        bgColor: surface,
+        menuBg: header,
+        inputBg: panel,
+        inputText: contentTextColor,
+        descriptionText: ioTextColor,
+        borderColor: accent
+      },
+      nodeSlot: {
+        ...DEFAULT_NODE_SLOT,
+        IMAGE: accent,
+        LATENT: accentAlt,
+        MODEL: panel,
+        CLIP: accentAlt,
+        CONTROL_NET: accent,
+        GUIDER: accentAlt
+      }
+    }
+  };
+}
+const CURATED_NODE_PRESET_PALETTES = [
+  {
+    id: "builtin-classic-midnight-gold",
+    name: "Midnight Gold",
+    category: "classic-elegant",
+    colors: ["#0B132B", "#1C2541", "#3A506B", "#5BC0BE", "#F9A03F"]
+  },
+  {
+    id: "builtin-classic-monochrome-slate",
+    name: "Monochrome Slate",
+    category: "classic-elegant",
+    colors: ["#121212", "#282828", "#3F3F3F", "#575757", "#717171"]
+  },
+  {
+    id: "builtin-classic-executive-blue",
+    name: "Executive Blue",
+    category: "classic-elegant",
+    colors: ["#003049", "#1D4360", "#2F5F80", "#F77F00", "#FCBF49"]
+  },
+  {
+    id: "builtin-nature-forest-retreat",
+    name: "Forest Retreat",
+    category: "nature-earth",
+    colors: ["#2D4A22", "#4A6B3A", "#5E7A48", "#8A9A5B", "#E1D89F"]
+  },
+  {
+    id: "builtin-nature-terracotta-warmth",
+    name: "Terracotta Warmth",
+    category: "nature-earth",
+    colors: ["#3D405B", "#4A506D", "#5E647A", "#E07A5F", "#F2CC8F"]
+  },
+  {
+    id: "builtin-nature-ocean-breeze",
+    name: "Ocean Breeze",
+    category: "nature-earth",
+    colors: ["#03045E", "#023E8A", "#0077B6", "#00B4D8", "#90E0EF"]
+  },
+  {
+    id: "builtin-modern-cyber-neon",
+    name: "Cyber Neon",
+    category: "modern-tech",
+    colors: ["#050505", "#1B1B1B", "#252525", "#7209B7", "#4CC9F0"]
+  },
+  {
+    id: "builtin-modern-hacker-green",
+    name: "Hacker Green",
+    category: "modern-tech",
+    colors: ["#0D1B2A", "#1B263B", "#27374F", "#415A77", "#E0E1DD"]
+  },
+  {
+    id: "builtin-modern-tech-purple",
+    name: "Tech Purple",
+    category: "modern-tech",
+    colors: ["#10002B", "#240046", "#3C096C", "#5A189A", "#7B2CBF"]
+  },
+  {
+    id: "builtin-pastel-cotton-candy-node",
+    name: "Cotton Candy Node",
+    category: "pastel-soft",
+    colors: ["#2B2735", "#3A3448", "#4A435B", "#CDB4DB", "#A2D2FF"]
+  },
+  {
+    id: "builtin-pastel-muted-spring-node",
+    name: "Muted Spring Node",
+    category: "pastel-soft",
+    colors: ["#2F2A33", "#413846", "#5A4B62", "#D1B3C4", "#E8C2CA"]
+  },
+  {
+    id: "builtin-pastel-sand-stone-node",
+    name: "Sand & Stone Node",
+    category: "pastel-soft",
+    colors: ["#2E2A26", "#3C362F", "#4E473F", "#D5BDAF", "#EDF6F9"]
+  },
+  {
+    id: "builtin-vibrant-sunset-pop-node",
+    name: "Sunset Pop Node",
+    category: "vibrant-bold",
+    colors: ["#1E1F29", "#2A2D3A", "#373B4C", "#FF9F1C", "#8AC926"]
+  },
+  {
+    id: "builtin-vibrant-retro-wave-node",
+    name: "Retro Wave Node",
+    category: "vibrant-bold",
+    colors: ["#181428", "#231A3A", "#32224F", "#F72585", "#4CC9F0"]
+  },
+  {
+    id: "builtin-vibrant-citric-node",
+    name: "Vibrant Citric Node",
+    category: "vibrant-bold",
+    colors: ["#1E2422", "#2B3632", "#3A4A45", "#FF9F1C", "#2EC4B6"]
+  }
+];
 const BUILTIN_PRESETS = [
   {
     id: "builtin-balanced-dark",
     name: "Balanced Dark",
+    category: "legacy",
     snapshot: {
       uiMeta: { ...DEFAULT_THEME_UI_META, activePresetId: "builtin-balanced-dark" },
       litegraphBase: { ...DEFAULT_LITEGRAPH_BASE },
@@ -6612,6 +6777,7 @@ const BUILTIN_PRESETS = [
   {
     id: "builtin-high-contrast",
     name: "High Contrast",
+    category: "legacy",
     snapshot: {
       uiMeta: {
         ...DEFAULT_THEME_UI_META,
@@ -6649,6 +6815,7 @@ const BUILTIN_PRESETS = [
   {
     id: "builtin-legacy-preview",
     name: "Legacy Preview",
+    category: "legacy",
     snapshot: {
       uiMeta: {
         ...DEFAULT_THEME_UI_META,
@@ -6669,7 +6836,8 @@ const BUILTIN_PRESETS = [
       comfyBase: { ...DEFAULT_COMFY_BASE },
       nodeSlot: { ...DEFAULT_NODE_SLOT }
     }
-  }
+  },
+  ...CURATED_NODE_PRESET_PALETTES.map((definition) => buildPalettePreset(definition))
 ];
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -6746,6 +6914,13 @@ function sanitizeOutlineEffect(value, fallback) {
 function sanitizePresetId(value, fallback) {
   const text = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (PRESET_ID_RE.test(text)) {
+    return text;
+  }
+  return fallback;
+}
+function sanitizePresetCategory(value, fallback) {
+  const text = typeof value === "string" ? value.trim() : fallback;
+  if (PRESET_CATEGORY_IDS.has(text)) {
     return text;
   }
   return fallback;
@@ -6903,12 +7078,13 @@ function migrateLegacyState(source) {
   });
   return base;
 }
-function sanitizeThemePreset(value, fallbackIndex = 0) {
+function sanitizeThemePreset(value, fallbackIndex = 0, fallbackCategory = "custom") {
   if (!isRecord$1(value)) {
     return null;
   }
   const id = sanitizePresetId(value.id, `preset_${fallbackIndex + 1}`);
   const name = sanitizePresetName(value.name);
+  const category = sanitizePresetCategory(value.category, fallbackCategory);
   const snapshotSource = isRecord$1(value.snapshot) ? value.snapshot : value;
   const snapshot = {
     uiMeta: sanitizeUiMeta(snapshotSource.uiMeta),
@@ -6916,7 +7092,7 @@ function sanitizeThemePreset(value, fallbackIndex = 0) {
     comfyBase: sanitizeComfyBase(snapshotSource.comfyBase),
     nodeSlot: sanitizeNodeSlot(snapshotSource.nodeSlot)
   };
-  return { id, name, snapshot };
+  return { id, name, category, snapshot };
 }
 function sanitizeCustomPresets(value) {
   if (!Array.isArray(value)) {
@@ -6925,12 +7101,12 @@ function sanitizeCustomPresets(value) {
   const seen = /* @__PURE__ */ new Set();
   const sanitized = [];
   for (let index = 0; index < value.length; index += 1) {
-    const preset = sanitizeThemePreset(value[index], index);
+    const preset = sanitizeThemePreset(value[index], index, "custom");
     if (!preset || seen.has(preset.id)) {
       continue;
     }
     seen.add(preset.id);
-    sanitized.push(preset);
+    sanitized.push({ ...preset, category: "custom" });
   }
   return sanitized;
 }
@@ -7033,6 +7209,7 @@ function saveCustomPreset(state, name) {
   const preset = {
     id: candidateId,
     name: presetName,
+    category: "custom",
     snapshot: toPresetSnapshot(normalized)
   };
   return sanitizeThemeState({
@@ -7060,11 +7237,34 @@ function removeCustomPreset(state, presetId) {
     }
   });
 }
-function listPresetOptions(state) {
+function listPresetCategories(state) {
+  const categoryById = new Set(listPresetOptions(state).map((preset) => preset.category));
+  return PRESET_CATEGORY_DEFINITIONS.filter((category) => {
+    if (category.id === "custom") {
+      return true;
+    }
+    return categoryById.has(category.id);
+  });
+}
+function listPresetOptions(state, category) {
   const normalized = sanitizeThemeState(state);
-  const builtins = BUILTIN_PRESETS.map((preset) => ({ id: preset.id, name: preset.name, source: "builtin" }));
-  const custom = normalized.presets.custom.map((preset) => ({ id: preset.id, name: preset.name, source: "custom" }));
-  return [...builtins, ...custom];
+  const builtins = BUILTIN_PRESETS.map((preset) => ({
+    id: preset.id,
+    name: preset.name,
+    source: "builtin",
+    category: preset.category
+  }));
+  const custom = normalized.presets.custom.map((preset) => ({
+    id: preset.id,
+    name: preset.name,
+    source: "custom",
+    category: sanitizePresetCategory(preset.category, "custom")
+  }));
+  const allOptions = [...builtins, ...custom];
+  if (!category) {
+    return allOptions;
+  }
+  return allOptions.filter((preset) => preset.category === category);
 }
 function resolvePreset(state, presetId) {
   for (const preset of BUILTIN_PRESETS) {
@@ -7104,7 +7304,7 @@ function mergeImportedPresets(state, imported) {
   const merged = [...normalized.presets.custom];
   const existing = new Set(merged.map((preset) => preset.id));
   for (const preset of imported) {
-    let candidate = preset;
+    let candidate = { ...preset, category: "custom" };
     let counter = 2;
     while (existing.has(candidate.id)) {
       candidate = {
@@ -7812,9 +8012,11 @@ const _hoisted_40 = { class: "panel-section" };
 const _hoisted_41 = { class: "section-body" };
 const _hoisted_42 = { class: "control-row" };
 const _hoisted_43 = ["value"];
-const _hoisted_44 = { class: "inline-controls" };
-const _hoisted_45 = ["onKeydown"];
+const _hoisted_44 = { class: "control-row" };
+const _hoisted_45 = ["value"];
 const _hoisted_46 = { class: "inline-controls" };
+const _hoisted_47 = ["onKeydown"];
+const _hoisted_48 = { class: "inline-controls" };
 const _sfc_main = /* @__PURE__ */ defineComponent({
   __name: "ThemeControlPanel",
   props: {
@@ -7832,6 +8034,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     const deletingFontFilename = /* @__PURE__ */ ref(null);
     const fontFeedbackInfo = /* @__PURE__ */ ref("");
     const fontFeedbackError = /* @__PURE__ */ ref("");
+    const selectedPresetCategory = /* @__PURE__ */ ref(PRESET_CATEGORY_DEFINITIONS[0].id);
     const uiColorFields = [
       { key: "contentTextColor", label: "Content Text" },
       { key: "titleTextColor", label: "Title Text" },
@@ -7884,13 +8087,40 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       { key: "NOISE", label: "NOISE" },
       { key: "GUIDER", label: "GUIDER" }
     ];
-    const presetOptions = computed(() => listPresetOptions(state.value));
+    const presetCategoryOptions = computed(() => listPresetCategories(state.value));
+    const allPresetOptions = computed(() => listPresetOptions(state.value));
+    const presetOptions = computed(() => listPresetOptions(state.value, selectedPresetCategory.value));
     const activePresetSelection = computed({
-      get: () => state.value.uiMeta.activePresetId ?? "",
+      get: () => {
+        const activePresetId = state.value.uiMeta.activePresetId;
+        if (!activePresetId) {
+          return "";
+        }
+        const belongsToCategory = presetOptions.value.some((preset) => preset.id === activePresetId);
+        return belongsToCategory ? activePresetId : "";
+      },
       set: (value) => {
         state.value.uiMeta.activePresetId = value || null;
       }
     });
+    function ensurePresetCategoryIsAvailable() {
+      const availableCategory = presetCategoryOptions.value.find((category) => category.id === selectedPresetCategory.value);
+      if (availableCategory) {
+        return;
+      }
+      selectedPresetCategory.value = presetCategoryOptions.value[0]?.id ?? "classic-elegant";
+    }
+    function alignPresetCategoryToActivePreset() {
+      const activePresetId = state.value.uiMeta.activePresetId;
+      if (activePresetId) {
+        const activePreset = allPresetOptions.value.find((preset) => preset.id === activePresetId);
+        if (activePreset) {
+          selectedPresetCategory.value = activePreset.category;
+          return;
+        }
+      }
+      ensurePresetCategoryIsAvailable();
+    }
     const previewCardStyle = computed(() => ({
       backgroundColor: state.value.uiMeta.bgColor,
       borderColor: state.value.uiMeta.outlineColor,
@@ -7915,12 +8145,17 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     }
     function deserialise(json) {
       state.value = deserializeThemeState(json);
+      alignPresetCategoryToActivePreset();
       scheduleThemeApply(state.value);
     }
     function emitChange() {
       state.value = sanitizeThemeState(state.value);
+      ensurePresetCategoryIsAvailable();
       scheduleThemeApply(state.value);
       props.onChange?.(serialise());
+    }
+    function onPresetCategoryChange() {
+      ensurePresetCategoryIsAvailable();
     }
     async function onFontFamilyChange() {
       await ensureFontLoaded(state.value.uiMeta.fontFamily);
@@ -7998,6 +8233,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
         return;
       }
       state.value = applyPresetSnapshot(state.value, resolved.snapshot, resolved.id);
+      selectedPresetCategory.value = resolved.category;
       await ensureFontLoaded(state.value.uiMeta.fontFamily);
       emitChange();
     }
@@ -8006,12 +8242,17 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
         return;
       }
       state.value = saveCustomPreset(state.value, newPresetName.value);
+      selectedPresetCategory.value = "custom";
       newPresetName.value = "";
       emitChange();
     }
     function removePreset() {
       const activeId = state.value.uiMeta.activePresetId;
-      if (!activeId || !activeId.startsWith("custom-")) {
+      if (!activeId) {
+        return;
+      }
+      const isCustomPreset = state.value.presets.custom.some((preset) => preset.id === activeId);
+      if (!isCustomPreset) {
         return;
       }
       state.value = removeCustomPreset(state.value, activeId);
@@ -8042,10 +8283,12 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
         return;
       }
       state.value = mergeImportedPresets(state.value, imported);
+      selectedPresetCategory.value = "custom";
       emitChange();
     }
     function resetDefaults() {
       state.value = sanitizeThemeState(DEFAULT_THEME_PANEL_STATE);
+      alignPresetCategoryToActivePreset();
       void onFontFamilyChange();
     }
     async function refreshFonts() {
@@ -8055,6 +8298,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     function cleanup() {
     }
     onMounted(async () => {
+      alignPresetCategoryToActivePreset();
       await refreshFonts();
       await ensureFontLoaded(state.value.uiMeta.fontFamily);
       scheduleThemeApply(state.value);
@@ -8064,7 +8308,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     __expose({ serialise, deserialise, cleanup });
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1, [
-        _cache[28] || (_cache[28] = createBaseVNode("header", { class: "panel-header" }, [
+        _cache[30] || (_cache[30] = createBaseVNode("header", { class: "panel-header" }, [
           createBaseVNode("h3", null, "Theme Control Panel v2"),
           createBaseVNode("p", null, "Expanded Nodes 2.0 palette, typography and presets")
         ], -1)),
@@ -8087,10 +8331,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           ])
         ], 4),
         createBaseVNode("details", _hoisted_3, [
-          _cache[20] || (_cache[20] = createBaseVNode("summary", null, "Typography and Core Visuals", -1)),
+          _cache[21] || (_cache[21] = createBaseVNode("summary", null, "Typography and Core Visuals", -1)),
           createBaseVNode("div", _hoisted_4, [
             createBaseVNode("div", _hoisted_5, [
-              _cache[10] || (_cache[10] = createBaseVNode("label", null, "Font Family", -1)),
+              _cache[11] || (_cache[11] = createBaseVNode("label", null, "Font Family", -1)),
               withDirectives(createBaseVNode("select", {
                 "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => state.value.uiMeta.fontFamily = $event),
                 class: "control-input",
@@ -8107,7 +8351,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ])
             ]),
             createBaseVNode("div", _hoisted_7, [
-              _cache[11] || (_cache[11] = createBaseVNode("label", null, "Custom Font Files", -1)),
+              _cache[12] || (_cache[12] = createBaseVNode("label", null, "Custom Font Files", -1)),
               createBaseVNode("div", _hoisted_8, [
                 createBaseVNode("button", {
                   class: "action-button",
@@ -8127,7 +8371,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               fontFeedbackError.value ? (openBlock(), createElementBlock("p", _hoisted_10, toDisplayString(fontFeedbackError.value), 1)) : fontFeedbackInfo.value ? (openBlock(), createElementBlock("p", _hoisted_11, toDisplayString(fontFeedbackInfo.value), 1)) : createCommentVNode("", true)
             ]),
             createBaseVNode("div", _hoisted_12, [
-              _cache[12] || (_cache[12] = createBaseVNode("label", null, "Installed Custom Fonts", -1)),
+              _cache[13] || (_cache[13] = createBaseVNode("label", null, "Installed Custom Fonts", -1)),
               customFonts.value.length > 0 ? (openBlock(), createElementBlock("div", _hoisted_13, [
                 (openBlock(true), createElementBlock(Fragment, null, renderList(customFonts.value, (font) => {
                   return openBlock(), createElementBlock("div", {
@@ -8149,7 +8393,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ])) : (openBlock(), createElementBlock("p", _hoisted_18, "No custom fonts found in the fonts folder."))
             ]),
             createBaseVNode("div", _hoisted_19, [
-              _cache[13] || (_cache[13] = createBaseVNode("label", null, "Body Text Size", -1)),
+              _cache[14] || (_cache[14] = createBaseVNode("label", null, "Body Text Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => state.value.uiMeta.bodyFontSize = $event),
                 class: "control-input",
@@ -8169,7 +8413,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.bodyFontSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_20, [
-              _cache[14] || (_cache[14] = createBaseVNode("label", null, "Header Text Size", -1)),
+              _cache[15] || (_cache[15] = createBaseVNode("label", null, "Header Text Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => state.value.uiMeta.titleFontSize = $event),
                 class: "control-input",
@@ -8189,7 +8433,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.titleFontSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_21, [
-              _cache[15] || (_cache[15] = createBaseVNode("label", null, "Textarea Size", -1)),
+              _cache[16] || (_cache[16] = createBaseVNode("label", null, "Textarea Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => state.value.uiMeta.textareaFontSize = $event),
                 class: "control-input",
@@ -8209,7 +8453,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.textareaFontSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_22, [
-              _cache[16] || (_cache[16] = createBaseVNode("label", null, "IO Label Size", -1)),
+              _cache[17] || (_cache[17] = createBaseVNode("label", null, "IO Label Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => state.value.uiMeta.ioTextSize = $event),
                 class: "control-input",
@@ -8229,7 +8473,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.ioTextSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_23, [
-              _cache[17] || (_cache[17] = createBaseVNode("label", null, "Connection Point Size", -1)),
+              _cache[18] || (_cache[18] = createBaseVNode("label", null, "Connection Point Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => state.value.uiMeta.slotPointSize = $event),
                 class: "control-input",
@@ -8267,12 +8511,12 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               }), 64))
             ]),
             createBaseVNode("div", _hoisted_26, [
-              _cache[19] || (_cache[19] = createBaseVNode("label", null, "Outline Effect", -1)),
+              _cache[20] || (_cache[20] = createBaseVNode("label", null, "Outline Effect", -1)),
               withDirectives(createBaseVNode("select", {
                 "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => state.value.uiMeta.outlineEffect = $event),
                 class: "control-input",
                 onChange: emitChange
-              }, [..._cache[18] || (_cache[18] = [
+              }, [..._cache[19] || (_cache[19] = [
                 createBaseVNode("option", { value: "solid" }, "Solid Border", -1),
                 createBaseVNode("option", { value: "static-glow" }, "Static Glow", -1),
                 createBaseVNode("option", { value: "pulsing-glow" }, "Pulsing Glow", -1),
@@ -8284,7 +8528,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           ])
         ]),
         createBaseVNode("details", _hoisted_27, [
-          _cache[21] || (_cache[21] = createBaseVNode("summary", null, "Litegraph Base", -1)),
+          _cache[22] || (_cache[22] = createBaseVNode("summary", null, "Litegraph Base", -1)),
           createBaseVNode("div", _hoisted_28, [
             createBaseVNode("div", _hoisted_29, [
               (openBlock(), createElementBlock(Fragment, null, renderList(litegraphColorFields, (field) => {
@@ -8307,7 +8551,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           ])
         ]),
         createBaseVNode("details", _hoisted_31, [
-          _cache[23] || (_cache[23] = createBaseVNode("summary", null, "Comfy Base", -1)),
+          _cache[24] || (_cache[24] = createBaseVNode("summary", null, "Comfy Base", -1)),
           createBaseVNode("div", _hoisted_32, [
             createBaseVNode("div", _hoisted_33, [
               (openBlock(), createElementBlock(Fragment, null, renderList(comfyColorFields, (field) => {
@@ -8328,7 +8572,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               }), 64))
             ]),
             createBaseVNode("div", _hoisted_35, [
-              _cache[22] || (_cache[22] = createBaseVNode("label", null, "Bar Shadow", -1)),
+              _cache[23] || (_cache[23] = createBaseVNode("label", null, "Bar Shadow", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => state.value.comfyBase.barShadow = $event),
                 class: "control-input",
@@ -8341,7 +8585,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           ])
         ]),
         createBaseVNode("details", _hoisted_36, [
-          _cache[24] || (_cache[24] = createBaseVNode("summary", null, "Node Slot Colors", -1)),
+          _cache[25] || (_cache[25] = createBaseVNode("summary", null, "Node Slot Colors", -1)),
           createBaseVNode("div", _hoisted_37, [
             createBaseVNode("div", _hoisted_38, [
               (openBlock(), createElementBlock(Fragment, null, renderList(slotColorFields, (field) => {
@@ -8364,34 +8608,51 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           ])
         ]),
         createBaseVNode("details", _hoisted_40, [
-          _cache[27] || (_cache[27] = createBaseVNode("summary", null, "Presets", -1)),
+          _cache[29] || (_cache[29] = createBaseVNode("summary", null, "Presets", -1)),
           createBaseVNode("div", _hoisted_41, [
             createBaseVNode("div", _hoisted_42, [
-              _cache[26] || (_cache[26] = createBaseVNode("label", null, "Active Preset", -1)),
+              _cache[26] || (_cache[26] = createBaseVNode("label", null, "Preset Category", -1)),
               withDirectives(createBaseVNode("select", {
-                "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => activePresetSelection.value = $event),
+                "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => selectedPresetCategory.value = $event),
+                class: "control-input",
+                onChange: onPresetCategoryChange
+              }, [
+                (openBlock(true), createElementBlock(Fragment, null, renderList(presetCategoryOptions.value, (category) => {
+                  return openBlock(), createElementBlock("option", {
+                    key: category.id,
+                    value: category.id
+                  }, toDisplayString(category.label), 9, _hoisted_43);
+                }), 128))
+              ], 544), [
+                [vModelSelect, selectedPresetCategory.value]
+              ])
+            ]),
+            createBaseVNode("div", _hoisted_44, [
+              _cache[28] || (_cache[28] = createBaseVNode("label", null, "Active Preset", -1)),
+              withDirectives(createBaseVNode("select", {
+                "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => activePresetSelection.value = $event),
                 class: "control-input",
                 onChange: onPresetSelect
               }, [
-                _cache[25] || (_cache[25] = createBaseVNode("option", { value: "" }, "No preset", -1)),
+                _cache[27] || (_cache[27] = createBaseVNode("option", { value: "" }, "No preset", -1)),
                 (openBlock(true), createElementBlock(Fragment, null, renderList(presetOptions.value, (preset) => {
                   return openBlock(), createElementBlock("option", {
                     key: preset.id,
                     value: preset.id
-                  }, toDisplayString(preset.name) + " (" + toDisplayString(preset.source) + ") ", 9, _hoisted_43);
+                  }, toDisplayString(preset.name), 9, _hoisted_45);
                 }), 128))
               ], 544), [
                 [vModelSelect, activePresetSelection.value]
               ])
             ]),
-            createBaseVNode("div", _hoisted_44, [
+            createBaseVNode("div", _hoisted_46, [
               withDirectives(createBaseVNode("input", {
-                "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => newPresetName.value = $event),
+                "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => newPresetName.value = $event),
                 class: "control-input",
                 type: "text",
                 placeholder: "Preset name",
                 onKeydown: withKeys(withModifiers(savePreset, ["prevent"]), ["enter"])
-              }, null, 40, _hoisted_45), [
+              }, null, 40, _hoisted_47), [
                 [vModelText, newPresetName.value]
               ]),
               createBaseVNode("button", {
@@ -8400,7 +8661,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                 onClick: savePreset
               }, "Save Current")
             ]),
-            createBaseVNode("div", _hoisted_46, [
+            createBaseVNode("div", _hoisted_48, [
               createBaseVNode("button", {
                 class: "action-button",
                 type: "button",
@@ -8445,7 +8706,7 @@ const _export_sfc = (sfc, props) => {
   }
   return target;
 };
-const ThemeControlPanel = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-70548b98"]]);
+const ThemeControlPanel = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-4992ee1f"]]);
 const MIN_W = 430;
 const MIN_H = 720;
 function notifyThemeConflict(nodeId) {
@@ -8624,7 +8885,7 @@ app.registerExtension({
   try {
     if (typeof document != "undefined") {
       var elementStyle = document.createElement("style");
-      elementStyle.appendChild(document.createTextNode('.theme-panel-root[data-v-70548b98] {\r\n  height: 100%;\r\n  display: grid;\r\n  grid-template-rows: auto auto auto auto auto auto auto auto;\r\n  gap: 10px;\r\n  padding: 10px;\r\n  color: #ececec;\r\n  background:\r\n    radial-gradient(120% 80% at 12% 0%, rgba(31, 199, 157, 0.22), transparent 62%),\r\n    linear-gradient(150deg, rgba(23, 29, 36, 0.96), rgba(17, 20, 25, 0.96));\r\n  border: 1px solid rgba(0, 209, 143, 0.3);\r\n  border-radius: 10px;\r\n  box-sizing: border-box;\r\n  overflow-y: auto;\r\n  font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;\n}\n.panel-header h3[data-v-70548b98] {\r\n  margin: 0;\r\n  font-size: 15px;\r\n  letter-spacing: 0.03em;\n}\n.panel-header p[data-v-70548b98] {\r\n  margin: 4px 0 0;\r\n  font-size: 11px;\r\n  color: #9db2c2;\n}\n.preview-card[data-v-70548b98] {\r\n  border: 1px solid;\r\n  border-radius: 8px;\r\n  overflow: hidden;\n}\n.preview-header[data-v-70548b98] {\r\n  padding: 6px 8px;\r\n  font-weight: 600;\n}\n.preview-content[data-v-70548b98] {\r\n  padding: 8px;\r\n  display: grid;\r\n  gap: 6px;\n}\n.preview-subtext[data-v-70548b98] {\r\n  opacity: 0.82;\n}\n.panel-section[data-v-70548b98] {\r\n  border: 1px solid rgba(129, 149, 164, 0.24);\r\n  border-radius: 8px;\r\n  background: rgba(18, 24, 32, 0.72);\r\n  overflow: hidden;\n}\n.panel-section summary[data-v-70548b98] {\r\n  cursor: pointer;\r\n  padding: 8px;\r\n  font-size: 12px;\r\n  letter-spacing: 0.05em;\r\n  text-transform: uppercase;\r\n  color: #8cf2d2;\r\n  user-select: none;\n}\n.section-body[data-v-70548b98] {\r\n  padding: 0 8px 8px;\r\n  display: grid;\r\n  gap: 8px;\n}\n.control-row[data-v-70548b98] {\r\n  display: grid;\r\n  gap: 4px;\n}\n.control-grid[data-v-70548b98] {\r\n  display: grid;\r\n  grid-template-columns: repeat(2, minmax(0, 1fr));\r\n  gap: 8px;\n}\n.slot-grid[data-v-70548b98] {\r\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n}\n.control-row label[data-v-70548b98] {\r\n  font-size: 11px;\r\n  color: #c3d6e4;\n}\n.control-input[data-v-70548b98] {\r\n  width: 100%;\r\n  box-sizing: border-box;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(8, 12, 18, 0.7);\r\n  color: #ecf4fa;\r\n  padding: 6px 8px;\n}\n.control-input[type="range"][data-v-70548b98] {\r\n  padding: 0;\n}\n.slider-row span[data-v-70548b98] {\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.color-input[data-v-70548b98] {\r\n  padding: 0;\r\n  min-height: 30px;\n}\n.inline-controls[data-v-70548b98] {\r\n  display: flex;\r\n  flex-wrap: wrap;\r\n  gap: 8px;\n}\n.feedback-text[data-v-70548b98] {\r\n  margin: 0;\r\n  font-size: 11px;\n}\n.feedback-error[data-v-70548b98] {\r\n  color: #ff8b8b;\n}\n.feedback-info[data-v-70548b98] {\r\n  color: #8cf2d2;\n}\n.font-list[data-v-70548b98] {\r\n  display: grid;\r\n  gap: 6px;\n}\n.font-item[data-v-70548b98] {\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: space-between;\r\n  gap: 8px;\r\n  padding: 6px 8px;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(10, 14, 20, 0.72);\n}\n.font-meta[data-v-70548b98] {\r\n  min-width: 0;\r\n  display: grid;\r\n  gap: 2px;\n}\n.font-family[data-v-70548b98] {\r\n  font-size: 12px;\r\n  color: #e8f4f8;\n}\n.font-file[data-v-70548b98] {\r\n  font-size: 10px;\r\n  color: #9fb2c2;\r\n  word-break: break-all;\n}\n.font-empty[data-v-70548b98] {\r\n  margin: 0;\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.action-button[data-v-70548b98],\r\n.reset-button[data-v-70548b98] {\r\n  border: 1px solid rgba(147, 170, 184, 0.4);\r\n  border-radius: 6px;\r\n  background: linear-gradient(135deg, rgba(34, 43, 54, 0.95), rgba(25, 34, 44, 0.95));\r\n  color: #eff7fa;\r\n  cursor: pointer;\r\n  padding: 7px 10px;\r\n  font-size: 11px;\r\n  letter-spacing: 0.03em;\n}\n.compact-button[data-v-70548b98] {\r\n  padding: 5px 8px;\r\n  font-size: 10px;\n}\n.action-button[data-v-70548b98]:hover,\r\n.reset-button[data-v-70548b98]:hover {\r\n  border-color: rgba(135, 243, 206, 0.65);\n}\n.action-button[data-v-70548b98]:disabled,\r\n.reset-button[data-v-70548b98]:disabled {\r\n  opacity: 0.55;\r\n  cursor: not-allowed;\r\n  border-color: rgba(147, 170, 184, 0.24);\n}\n.hidden-input[data-v-70548b98] {\r\n  display: none;\n}\n.panel-footer[data-v-70548b98] {\r\n  display: flex;\r\n  justify-content: flex-end;\n}'));
+      elementStyle.appendChild(document.createTextNode('.theme-panel-root[data-v-4992ee1f] {\r\n  height: 100%;\r\n  display: grid;\r\n  grid-template-rows: auto auto auto auto auto auto auto auto;\r\n  gap: 10px;\r\n  padding: 10px;\r\n  color: #ececec;\r\n  background:\r\n    radial-gradient(120% 80% at 12% 0%, rgba(31, 199, 157, 0.22), transparent 62%),\r\n    linear-gradient(150deg, rgba(23, 29, 36, 0.96), rgba(17, 20, 25, 0.96));\r\n  border: 1px solid rgba(0, 209, 143, 0.3);\r\n  border-radius: 10px;\r\n  box-sizing: border-box;\r\n  overflow-y: auto;\r\n  font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;\n}\n.panel-header h3[data-v-4992ee1f] {\r\n  margin: 0;\r\n  font-size: 15px;\r\n  letter-spacing: 0.03em;\n}\n.panel-header p[data-v-4992ee1f] {\r\n  margin: 4px 0 0;\r\n  font-size: 11px;\r\n  color: #9db2c2;\n}\n.preview-card[data-v-4992ee1f] {\r\n  border: 1px solid;\r\n  border-radius: 8px;\r\n  overflow: hidden;\n}\n.preview-header[data-v-4992ee1f] {\r\n  padding: 6px 8px;\r\n  font-weight: 600;\n}\n.preview-content[data-v-4992ee1f] {\r\n  padding: 8px;\r\n  display: grid;\r\n  gap: 6px;\n}\n.preview-subtext[data-v-4992ee1f] {\r\n  opacity: 0.82;\n}\n.panel-section[data-v-4992ee1f] {\r\n  border: 1px solid rgba(129, 149, 164, 0.24);\r\n  border-radius: 8px;\r\n  background: rgba(18, 24, 32, 0.72);\r\n  overflow: hidden;\n}\n.panel-section summary[data-v-4992ee1f] {\r\n  cursor: pointer;\r\n  padding: 8px;\r\n  font-size: 12px;\r\n  letter-spacing: 0.05em;\r\n  text-transform: uppercase;\r\n  color: #8cf2d2;\r\n  user-select: none;\n}\n.section-body[data-v-4992ee1f] {\r\n  padding: 0 8px 8px;\r\n  display: grid;\r\n  gap: 8px;\n}\n.control-row[data-v-4992ee1f] {\r\n  display: grid;\r\n  gap: 4px;\n}\n.control-grid[data-v-4992ee1f] {\r\n  display: grid;\r\n  grid-template-columns: repeat(2, minmax(0, 1fr));\r\n  gap: 8px;\n}\n.slot-grid[data-v-4992ee1f] {\r\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n}\n.control-row label[data-v-4992ee1f] {\r\n  font-size: 11px;\r\n  color: #c3d6e4;\n}\n.control-input[data-v-4992ee1f] {\r\n  width: 100%;\r\n  box-sizing: border-box;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(8, 12, 18, 0.7);\r\n  color: #ecf4fa;\r\n  padding: 6px 8px;\n}\n.control-input[type="range"][data-v-4992ee1f] {\r\n  padding: 0;\n}\n.slider-row span[data-v-4992ee1f] {\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.color-input[data-v-4992ee1f] {\r\n  padding: 0;\r\n  min-height: 30px;\n}\n.inline-controls[data-v-4992ee1f] {\r\n  display: flex;\r\n  flex-wrap: wrap;\r\n  gap: 8px;\n}\n.feedback-text[data-v-4992ee1f] {\r\n  margin: 0;\r\n  font-size: 11px;\n}\n.feedback-error[data-v-4992ee1f] {\r\n  color: #ff8b8b;\n}\n.feedback-info[data-v-4992ee1f] {\r\n  color: #8cf2d2;\n}\n.font-list[data-v-4992ee1f] {\r\n  display: grid;\r\n  gap: 6px;\n}\n.font-item[data-v-4992ee1f] {\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: space-between;\r\n  gap: 8px;\r\n  padding: 6px 8px;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(10, 14, 20, 0.72);\n}\n.font-meta[data-v-4992ee1f] {\r\n  min-width: 0;\r\n  display: grid;\r\n  gap: 2px;\n}\n.font-family[data-v-4992ee1f] {\r\n  font-size: 12px;\r\n  color: #e8f4f8;\n}\n.font-file[data-v-4992ee1f] {\r\n  font-size: 10px;\r\n  color: #9fb2c2;\r\n  word-break: break-all;\n}\n.font-empty[data-v-4992ee1f] {\r\n  margin: 0;\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.action-button[data-v-4992ee1f],\r\n.reset-button[data-v-4992ee1f] {\r\n  border: 1px solid rgba(147, 170, 184, 0.4);\r\n  border-radius: 6px;\r\n  background: linear-gradient(135deg, rgba(34, 43, 54, 0.95), rgba(25, 34, 44, 0.95));\r\n  color: #eff7fa;\r\n  cursor: pointer;\r\n  padding: 7px 10px;\r\n  font-size: 11px;\r\n  letter-spacing: 0.03em;\n}\n.compact-button[data-v-4992ee1f] {\r\n  padding: 5px 8px;\r\n  font-size: 10px;\n}\n.action-button[data-v-4992ee1f]:hover,\r\n.reset-button[data-v-4992ee1f]:hover {\r\n  border-color: rgba(135, 243, 206, 0.65);\n}\n.action-button[data-v-4992ee1f]:disabled,\r\n.reset-button[data-v-4992ee1f]:disabled {\r\n  opacity: 0.55;\r\n  cursor: not-allowed;\r\n  border-color: rgba(147, 170, 184, 0.24);\n}\n.hidden-input[data-v-4992ee1f] {\r\n  display: none;\n}\n.panel-footer[data-v-4992ee1f] {\r\n  display: flex;\r\n  justify-content: flex-end;\n}'));
       document.head.appendChild(elementStyle);
     }
   } catch (e) {
