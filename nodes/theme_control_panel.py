@@ -19,7 +19,6 @@ _PRESET_CATEGORIES = {
     "legacy",
     "custom",
 }
-_OUTLINE_EFFECTS = {"solid", "static-glow", "pulsing-glow", "scanline"}
 _SLOT_KEYS = [
     "IMAGE",
     "LATENT",
@@ -48,7 +47,6 @@ _DEFAULT_UI_META: dict[str, Any] = {
     "bgColor": "#242424",
     "titleBgColor": "#2f2f2f",
     "outlineColor": "#00d18f",
-    "outlineEffect": "solid",
     "activePresetId": None,
 }
 
@@ -142,11 +140,6 @@ def _sanitize_family(value: Any, fallback: str) -> str:
     return text if _FAMILY_RE.fullmatch(text) else fallback
 
 
-def _sanitize_outline_effect(value: Any, fallback: str) -> str:
-    text = value if isinstance(value, str) else ""
-    return text if text in _OUTLINE_EFFECTS else fallback
-
-
 def _sanitize_preset_id(value: Any) -> str | None:
     text = value.strip().lower() if isinstance(value, str) else ""
     if not text:
@@ -176,7 +169,6 @@ def _sanitize_ui_meta(value: Any) -> dict[str, Any]:
         "bgColor": _sanitize_hex(source.get("bgColor"), _DEFAULT_UI_META["bgColor"]),
         "titleBgColor": _sanitize_hex(source.get("titleBgColor"), _DEFAULT_UI_META["titleBgColor"]),
         "outlineColor": _sanitize_hex(source.get("outlineColor"), _DEFAULT_UI_META["outlineColor"]),
-        "outlineEffect": _sanitize_outline_effect(source.get("outlineEffect"), _DEFAULT_UI_META["outlineEffect"]),
         "activePresetId": _sanitize_preset_id(source.get("activePresetId")),
     }
 
@@ -335,7 +327,6 @@ def _migrate_legacy_state(value: dict[str, Any]) -> dict[str, Any]:
             "bgColor": bg_color,
             "titleBgColor": title_bg_color,
             "outlineColor": outline_color,
-            "outlineEffect": value.get("outlineEffect"),
             "activePresetId": None,
         },
         "litegraphBase": {

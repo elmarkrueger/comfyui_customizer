@@ -6516,12 +6516,6 @@ const PRESET_CATEGORY_DEFINITIONS = [
 const PRESET_CATEGORY_IDS = new Set(
   PRESET_CATEGORY_DEFINITIONS.map((category) => category.id)
 );
-const OUTLINE_EFFECTS = /* @__PURE__ */ new Set([
-  "solid",
-  "static-glow",
-  "pulsing-glow",
-  "scanline"
-]);
 const SLOT_KEYS = [
   "IMAGE",
   "LATENT",
@@ -6549,7 +6543,6 @@ const DEFAULT_THEME_UI_META = {
   bgColor: "#242424",
   titleBgColor: "#2f2f2f",
   outlineColor: "#00d18f",
-  outlineEffect: "solid",
   activePresetId: null
 };
 const DEFAULT_LITEGRAPH_BASE = {
@@ -6904,13 +6897,6 @@ function sanitizeFamily(value, fallback) {
   }
   return text;
 }
-function sanitizeOutlineEffect(value, fallback) {
-  const text = typeof value === "string" ? value : "";
-  if (OUTLINE_EFFECTS.has(text)) {
-    return text;
-  }
-  return fallback;
-}
 function sanitizePresetId(value, fallback) {
   const text = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (PRESET_ID_RE.test(text)) {
@@ -6947,7 +6933,6 @@ function sanitizeUiMeta(value) {
     bgColor: sanitizeColor(source.bgColor, DEFAULT_THEME_UI_META.bgColor),
     titleBgColor: sanitizeColor(source.titleBgColor, DEFAULT_THEME_UI_META.titleBgColor),
     outlineColor: sanitizeColor(source.outlineColor, DEFAULT_THEME_UI_META.outlineColor),
-    outlineEffect: sanitizeOutlineEffect(source.outlineEffect, DEFAULT_THEME_UI_META.outlineEffect),
     activePresetId: typeof source.activePresetId === "string" && source.activePresetId.trim() ? sanitizePresetId(source.activePresetId, "") : null
   };
   const contentTextColor = ensureReadableColor(
@@ -7050,7 +7035,6 @@ function migrateLegacyState(source) {
     bgColor,
     titleBgColor,
     outlineColor,
-    outlineEffect: source.outlineEffect,
     activePresetId: null
   });
   base.litegraphBase = sanitizeLitegraphBase({
@@ -7526,53 +7510,12 @@ ${pseudoPointSelector} {
 }
 function compileOutlineCss(state) {
   const outlineColor = state.uiMeta.outlineColor;
-  switch (state.uiMeta.outlineEffect) {
-    case "solid":
-      return `
+  return `
 ${NODE_OUTLINE_SELECTOR} {
   box-shadow: inset 0 0 0 1px ${outlineColor} !important;
   animation: none !important;
 }
 `;
-    case "static-glow":
-      return `
-${NODE_OUTLINE_SELECTOR} {
-  box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 14px 2px ${outlineColor} !important;
-  animation: none !important;
-}
-`;
-    case "pulsing-glow":
-      return `
-@keyframes duffyThemePulse {
-  0% { box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 6px 1px ${outlineColor}; }
-  100% { box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 20px 5px ${outlineColor}; }
-}
-
-${NODE_OUTLINE_SELECTOR} {
-  animation: duffyThemePulse 1.8s ease-in-out infinite alternate !important;
-}
-`;
-    case "scanline":
-      return `
-@keyframes duffyThemeScanline {
-  0% {
-    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 -10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
-  }
-  50% {
-    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 0 16px -8px ${outlineColor}, 0 0 12px 2px ${outlineColor}66;
-  }
-  100% {
-    box-shadow: inset 0 0 0 1px ${outlineColor}, 0 10px 12px -10px ${outlineColor}, 0 0 10px 1px ${outlineColor}66;
-  }
-}
-
-${NODE_OUTLINE_SELECTOR} {
-  animation: duffyThemeScanline 1.4s linear infinite !important;
-}
-`;
-    default:
-      return "";
-  }
 }
 function compileCss(state) {
   const ui = state.uiMeta;
@@ -7975,29 +7918,28 @@ const _hoisted_22 = { class: "control-row slider-row" };
 const _hoisted_23 = { class: "control-row slider-row" };
 const _hoisted_24 = { class: "control-grid" };
 const _hoisted_25 = ["onUpdate:modelValue"];
-const _hoisted_26 = { class: "control-row" };
-const _hoisted_27 = { class: "panel-section" };
-const _hoisted_28 = { class: "section-body" };
-const _hoisted_29 = { class: "control-grid" };
-const _hoisted_30 = ["onUpdate:modelValue"];
-const _hoisted_31 = { class: "panel-section" };
-const _hoisted_32 = { class: "section-body" };
-const _hoisted_33 = { class: "control-grid" };
-const _hoisted_34 = ["onUpdate:modelValue"];
-const _hoisted_35 = { class: "control-row" };
-const _hoisted_36 = { class: "panel-section" };
-const _hoisted_37 = { class: "section-body" };
-const _hoisted_38 = { class: "control-grid slot-grid" };
-const _hoisted_39 = ["onUpdate:modelValue"];
-const _hoisted_40 = { class: "panel-section" };
-const _hoisted_41 = { class: "section-body" };
-const _hoisted_42 = { class: "control-row" };
-const _hoisted_43 = ["value"];
-const _hoisted_44 = { class: "control-row" };
-const _hoisted_45 = ["value"];
-const _hoisted_46 = { class: "inline-controls" };
-const _hoisted_47 = ["onKeydown"];
-const _hoisted_48 = { class: "inline-controls" };
+const _hoisted_26 = { class: "panel-section" };
+const _hoisted_27 = { class: "section-body" };
+const _hoisted_28 = { class: "control-grid" };
+const _hoisted_29 = ["onUpdate:modelValue"];
+const _hoisted_30 = { class: "panel-section" };
+const _hoisted_31 = { class: "section-body" };
+const _hoisted_32 = { class: "control-grid" };
+const _hoisted_33 = ["onUpdate:modelValue"];
+const _hoisted_34 = { class: "control-row" };
+const _hoisted_35 = { class: "panel-section" };
+const _hoisted_36 = { class: "section-body" };
+const _hoisted_37 = { class: "control-grid slot-grid" };
+const _hoisted_38 = ["onUpdate:modelValue"];
+const _hoisted_39 = { class: "panel-section" };
+const _hoisted_40 = { class: "section-body" };
+const _hoisted_41 = { class: "control-row" };
+const _hoisted_42 = ["value"];
+const _hoisted_43 = { class: "control-row" };
+const _hoisted_44 = ["value"];
+const _hoisted_45 = { class: "inline-controls" };
+const _hoisted_46 = ["onKeydown"];
+const _hoisted_47 = { class: "inline-controls" };
 const _sfc_main = /* @__PURE__ */ defineComponent({
   __name: "ThemeControlPanel",
   props: {
@@ -8289,7 +8231,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     __expose({ serialise, deserialise, cleanup });
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1, [
-        _cache[30] || (_cache[30] = createBaseVNode("header", { class: "panel-header" }, [
+        _cache[27] || (_cache[27] = createBaseVNode("header", { class: "panel-header" }, [
           createBaseVNode("h3", null, "Theme Control Panel v2"),
           createBaseVNode("p", null, "Expanded Nodes 2.0 palette, typography and presets")
         ], -1)),
@@ -8312,10 +8254,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           ])
         ], 4),
         createBaseVNode("details", _hoisted_3, [
-          _cache[21] || (_cache[21] = createBaseVNode("summary", null, "Typography and Core Visuals", -1)),
+          _cache[18] || (_cache[18] = createBaseVNode("summary", null, "Typography and Core Visuals", -1)),
           createBaseVNode("div", _hoisted_4, [
             createBaseVNode("div", _hoisted_5, [
-              _cache[11] || (_cache[11] = createBaseVNode("label", null, "Font Family", -1)),
+              _cache[10] || (_cache[10] = createBaseVNode("label", null, "Font Family", -1)),
               withDirectives(createBaseVNode("select", {
                 "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => state.value.uiMeta.fontFamily = $event),
                 class: "control-input",
@@ -8332,7 +8274,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ])
             ]),
             createBaseVNode("div", _hoisted_7, [
-              _cache[12] || (_cache[12] = createBaseVNode("label", null, "Custom Font Files", -1)),
+              _cache[11] || (_cache[11] = createBaseVNode("label", null, "Custom Font Files", -1)),
               createBaseVNode("div", _hoisted_8, [
                 createBaseVNode("button", {
                   class: "action-button",
@@ -8352,7 +8294,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               fontFeedbackError.value ? (openBlock(), createElementBlock("p", _hoisted_10, toDisplayString(fontFeedbackError.value), 1)) : fontFeedbackInfo.value ? (openBlock(), createElementBlock("p", _hoisted_11, toDisplayString(fontFeedbackInfo.value), 1)) : createCommentVNode("", true)
             ]),
             createBaseVNode("div", _hoisted_12, [
-              _cache[13] || (_cache[13] = createBaseVNode("label", null, "Installed Custom Fonts", -1)),
+              _cache[12] || (_cache[12] = createBaseVNode("label", null, "Installed Custom Fonts", -1)),
               customFonts.value.length > 0 ? (openBlock(), createElementBlock("div", _hoisted_13, [
                 (openBlock(true), createElementBlock(Fragment, null, renderList(customFonts.value, (font) => {
                   return openBlock(), createElementBlock("div", {
@@ -8374,7 +8316,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               ])) : (openBlock(), createElementBlock("p", _hoisted_18, "No custom fonts found in the fonts folder."))
             ]),
             createBaseVNode("div", _hoisted_19, [
-              _cache[14] || (_cache[14] = createBaseVNode("label", null, "Body Text Size", -1)),
+              _cache[13] || (_cache[13] = createBaseVNode("label", null, "Body Text Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => state.value.uiMeta.bodyFontSize = $event),
                 class: "control-input",
@@ -8394,7 +8336,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.bodyFontSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_20, [
-              _cache[15] || (_cache[15] = createBaseVNode("label", null, "Header Text Size", -1)),
+              _cache[14] || (_cache[14] = createBaseVNode("label", null, "Header Text Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => state.value.uiMeta.titleFontSize = $event),
                 class: "control-input",
@@ -8414,7 +8356,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.titleFontSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_21, [
-              _cache[16] || (_cache[16] = createBaseVNode("label", null, "Textarea Size", -1)),
+              _cache[15] || (_cache[15] = createBaseVNode("label", null, "Textarea Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => state.value.uiMeta.textareaFontSize = $event),
                 class: "control-input",
@@ -8434,7 +8376,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.textareaFontSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_22, [
-              _cache[17] || (_cache[17] = createBaseVNode("label", null, "IO Label Size", -1)),
+              _cache[16] || (_cache[16] = createBaseVNode("label", null, "IO Label Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => state.value.uiMeta.ioTextSize = $event),
                 class: "control-input",
@@ -8454,7 +8396,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               createBaseVNode("span", null, toDisplayString(state.value.uiMeta.ioTextSize) + "px", 1)
             ]),
             createBaseVNode("div", _hoisted_23, [
-              _cache[18] || (_cache[18] = createBaseVNode("label", null, "Connection Point Size", -1)),
+              _cache[17] || (_cache[17] = createBaseVNode("label", null, "Connection Point Size", -1)),
               withDirectives(createBaseVNode("input", {
                 "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => state.value.uiMeta.slotPointSize = $event),
                 class: "control-input",
@@ -8490,28 +8432,13 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                   ])
                 ]);
               }), 64))
-            ]),
-            createBaseVNode("div", _hoisted_26, [
-              _cache[20] || (_cache[20] = createBaseVNode("label", null, "Outline Effect", -1)),
-              withDirectives(createBaseVNode("select", {
-                "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => state.value.uiMeta.outlineEffect = $event),
-                class: "control-input",
-                onChange: emitChange
-              }, [..._cache[19] || (_cache[19] = [
-                createBaseVNode("option", { value: "solid" }, "Solid Border", -1),
-                createBaseVNode("option", { value: "static-glow" }, "Static Glow", -1),
-                createBaseVNode("option", { value: "pulsing-glow" }, "Pulsing Glow", -1),
-                createBaseVNode("option", { value: "scanline" }, "Scanline", -1)
-              ])], 544), [
-                [vModelSelect, state.value.uiMeta.outlineEffect]
-              ])
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_27, [
-          _cache[22] || (_cache[22] = createBaseVNode("summary", null, "Litegraph Base", -1)),
-          createBaseVNode("div", _hoisted_28, [
-            createBaseVNode("div", _hoisted_29, [
+        createBaseVNode("details", _hoisted_26, [
+          _cache[19] || (_cache[19] = createBaseVNode("summary", null, "Litegraph Base", -1)),
+          createBaseVNode("div", _hoisted_27, [
+            createBaseVNode("div", _hoisted_28, [
               (openBlock(), createElementBlock(Fragment, null, renderList(litegraphColorFields, (field) => {
                 return createBaseVNode("div", {
                   key: field.key,
@@ -8523,7 +8450,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                     class: "control-input color-input",
                     type: "color",
                     onInput: emitChange
-                  }, null, 40, _hoisted_30), [
+                  }, null, 40, _hoisted_29), [
                     [vModelText, state.value.litegraphBase[field.key]]
                   ])
                 ]);
@@ -8531,10 +8458,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_31, [
-          _cache[24] || (_cache[24] = createBaseVNode("summary", null, "Comfy Base", -1)),
-          createBaseVNode("div", _hoisted_32, [
-            createBaseVNode("div", _hoisted_33, [
+        createBaseVNode("details", _hoisted_30, [
+          _cache[21] || (_cache[21] = createBaseVNode("summary", null, "Comfy Base", -1)),
+          createBaseVNode("div", _hoisted_31, [
+            createBaseVNode("div", _hoisted_32, [
               (openBlock(), createElementBlock(Fragment, null, renderList(comfyColorFields, (field) => {
                 return createBaseVNode("div", {
                   key: field.key,
@@ -8546,16 +8473,16 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                     class: "control-input color-input",
                     type: "color",
                     onInput: emitChange
-                  }, null, 40, _hoisted_34), [
+                  }, null, 40, _hoisted_33), [
                     [vModelText, state.value.comfyBase[field.key]]
                   ])
                 ]);
               }), 64))
             ]),
-            createBaseVNode("div", _hoisted_35, [
-              _cache[23] || (_cache[23] = createBaseVNode("label", null, "Bar Shadow", -1)),
+            createBaseVNode("div", _hoisted_34, [
+              _cache[20] || (_cache[20] = createBaseVNode("label", null, "Bar Shadow", -1)),
               withDirectives(createBaseVNode("input", {
-                "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => state.value.comfyBase.barShadow = $event),
+                "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => state.value.comfyBase.barShadow = $event),
                 class: "control-input",
                 type: "text",
                 onInput: emitChange
@@ -8565,10 +8492,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_36, [
-          _cache[25] || (_cache[25] = createBaseVNode("summary", null, "Node Slot Colors", -1)),
-          createBaseVNode("div", _hoisted_37, [
-            createBaseVNode("div", _hoisted_38, [
+        createBaseVNode("details", _hoisted_35, [
+          _cache[22] || (_cache[22] = createBaseVNode("summary", null, "Node Slot Colors", -1)),
+          createBaseVNode("div", _hoisted_36, [
+            createBaseVNode("div", _hoisted_37, [
               (openBlock(), createElementBlock(Fragment, null, renderList(slotColorFields, (field) => {
                 return createBaseVNode("div", {
                   key: field.key,
@@ -8580,7 +8507,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                     class: "control-input color-input",
                     type: "color",
                     onInput: emitChange
-                  }, null, 40, _hoisted_39), [
+                  }, null, 40, _hoisted_38), [
                     [vModelText, state.value.nodeSlot[field.key]]
                   ])
                 ]);
@@ -8588,13 +8515,13 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             ])
           ])
         ]),
-        createBaseVNode("details", _hoisted_40, [
-          _cache[29] || (_cache[29] = createBaseVNode("summary", null, "Presets", -1)),
-          createBaseVNode("div", _hoisted_41, [
-            createBaseVNode("div", _hoisted_42, [
-              _cache[26] || (_cache[26] = createBaseVNode("label", null, "Preset Category", -1)),
+        createBaseVNode("details", _hoisted_39, [
+          _cache[26] || (_cache[26] = createBaseVNode("summary", null, "Presets", -1)),
+          createBaseVNode("div", _hoisted_40, [
+            createBaseVNode("div", _hoisted_41, [
+              _cache[23] || (_cache[23] = createBaseVNode("label", null, "Preset Category", -1)),
               withDirectives(createBaseVNode("select", {
-                "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => selectedPresetCategory.value = $event),
+                "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => selectedPresetCategory.value = $event),
                 class: "control-input",
                 onChange: onPresetCategoryChange
               }, [
@@ -8602,38 +8529,38 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                   return openBlock(), createElementBlock("option", {
                     key: category.id,
                     value: category.id
-                  }, toDisplayString(category.label), 9, _hoisted_43);
+                  }, toDisplayString(category.label), 9, _hoisted_42);
                 }), 128))
               ], 544), [
                 [vModelSelect, selectedPresetCategory.value]
               ])
             ]),
-            createBaseVNode("div", _hoisted_44, [
-              _cache[28] || (_cache[28] = createBaseVNode("label", null, "Active Preset", -1)),
+            createBaseVNode("div", _hoisted_43, [
+              _cache[25] || (_cache[25] = createBaseVNode("label", null, "Active Preset", -1)),
               withDirectives(createBaseVNode("select", {
-                "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => activePresetSelection.value = $event),
+                "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => activePresetSelection.value = $event),
                 class: "control-input",
                 onChange: onPresetSelect
               }, [
-                _cache[27] || (_cache[27] = createBaseVNode("option", { value: "" }, "No preset", -1)),
+                _cache[24] || (_cache[24] = createBaseVNode("option", { value: "" }, "No preset", -1)),
                 (openBlock(true), createElementBlock(Fragment, null, renderList(presetOptions.value, (preset) => {
                   return openBlock(), createElementBlock("option", {
                     key: preset.id,
                     value: preset.id
-                  }, toDisplayString(preset.name), 9, _hoisted_45);
+                  }, toDisplayString(preset.name), 9, _hoisted_44);
                 }), 128))
               ], 544), [
                 [vModelSelect, activePresetSelection.value]
               ])
             ]),
-            createBaseVNode("div", _hoisted_46, [
+            createBaseVNode("div", _hoisted_45, [
               withDirectives(createBaseVNode("input", {
-                "onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => newPresetName.value = $event),
+                "onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => newPresetName.value = $event),
                 class: "control-input",
                 type: "text",
                 placeholder: "Preset name",
                 onKeydown: withKeys(withModifiers(savePreset, ["prevent"]), ["enter"])
-              }, null, 40, _hoisted_47), [
+              }, null, 40, _hoisted_46), [
                 [vModelText, newPresetName.value]
               ]),
               createBaseVNode("button", {
@@ -8642,7 +8569,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                 onClick: savePreset
               }, "Save Current")
             ]),
-            createBaseVNode("div", _hoisted_48, [
+            createBaseVNode("div", _hoisted_47, [
               createBaseVNode("button", {
                 class: "action-button",
                 type: "button",
@@ -8687,7 +8614,7 @@ const _export_sfc = (sfc, props) => {
   }
   return target;
 };
-const ThemeControlPanel = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-4992ee1f"]]);
+const ThemeControlPanel = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-e9d7459e"]]);
 const MIN_W = 430;
 const MIN_H = 720;
 function notifyThemeConflict(nodeId) {
@@ -8856,7 +8783,7 @@ app.registerExtension({
   try {
     if (typeof document != "undefined") {
       var elementStyle = document.createElement("style");
-      elementStyle.appendChild(document.createTextNode('.theme-panel-root[data-v-4992ee1f] {\r\n  height: 100%;\r\n  display: grid;\r\n  grid-template-rows: auto auto auto auto auto auto auto auto;\r\n  gap: 10px;\r\n  padding: 10px;\r\n  color: #ececec;\r\n  background:\r\n    radial-gradient(120% 80% at 12% 0%, rgba(31, 199, 157, 0.22), transparent 62%),\r\n    linear-gradient(150deg, rgba(23, 29, 36, 0.96), rgba(17, 20, 25, 0.96));\r\n  border: 1px solid rgba(0, 209, 143, 0.3);\r\n  border-radius: 10px;\r\n  box-sizing: border-box;\r\n  overflow-y: auto;\r\n  font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;\n}\n.panel-header h3[data-v-4992ee1f] {\r\n  margin: 0;\r\n  font-size: 15px;\r\n  letter-spacing: 0.03em;\n}\n.panel-header p[data-v-4992ee1f] {\r\n  margin: 4px 0 0;\r\n  font-size: 11px;\r\n  color: #9db2c2;\n}\n.preview-card[data-v-4992ee1f] {\r\n  border: 1px solid;\r\n  border-radius: 8px;\r\n  overflow: hidden;\n}\n.preview-header[data-v-4992ee1f] {\r\n  padding: 6px 8px;\r\n  font-weight: 600;\n}\n.preview-content[data-v-4992ee1f] {\r\n  padding: 8px;\r\n  display: grid;\r\n  gap: 6px;\n}\n.preview-subtext[data-v-4992ee1f] {\r\n  opacity: 0.82;\n}\n.panel-section[data-v-4992ee1f] {\r\n  border: 1px solid rgba(129, 149, 164, 0.24);\r\n  border-radius: 8px;\r\n  background: rgba(18, 24, 32, 0.72);\r\n  overflow: hidden;\n}\n.panel-section summary[data-v-4992ee1f] {\r\n  cursor: pointer;\r\n  padding: 8px;\r\n  font-size: 12px;\r\n  letter-spacing: 0.05em;\r\n  text-transform: uppercase;\r\n  color: #8cf2d2;\r\n  user-select: none;\n}\n.section-body[data-v-4992ee1f] {\r\n  padding: 0 8px 8px;\r\n  display: grid;\r\n  gap: 8px;\n}\n.control-row[data-v-4992ee1f] {\r\n  display: grid;\r\n  gap: 4px;\n}\n.control-grid[data-v-4992ee1f] {\r\n  display: grid;\r\n  grid-template-columns: repeat(2, minmax(0, 1fr));\r\n  gap: 8px;\n}\n.slot-grid[data-v-4992ee1f] {\r\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n}\n.control-row label[data-v-4992ee1f] {\r\n  font-size: 11px;\r\n  color: #c3d6e4;\n}\n.control-input[data-v-4992ee1f] {\r\n  width: 100%;\r\n  box-sizing: border-box;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(8, 12, 18, 0.7);\r\n  color: #ecf4fa;\r\n  padding: 6px 8px;\n}\n.control-input[type="range"][data-v-4992ee1f] {\r\n  padding: 0;\n}\n.slider-row span[data-v-4992ee1f] {\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.color-input[data-v-4992ee1f] {\r\n  padding: 0;\r\n  min-height: 30px;\n}\n.inline-controls[data-v-4992ee1f] {\r\n  display: flex;\r\n  flex-wrap: wrap;\r\n  gap: 8px;\n}\n.feedback-text[data-v-4992ee1f] {\r\n  margin: 0;\r\n  font-size: 11px;\n}\n.feedback-error[data-v-4992ee1f] {\r\n  color: #ff8b8b;\n}\n.feedback-info[data-v-4992ee1f] {\r\n  color: #8cf2d2;\n}\n.font-list[data-v-4992ee1f] {\r\n  display: grid;\r\n  gap: 6px;\n}\n.font-item[data-v-4992ee1f] {\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: space-between;\r\n  gap: 8px;\r\n  padding: 6px 8px;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(10, 14, 20, 0.72);\n}\n.font-meta[data-v-4992ee1f] {\r\n  min-width: 0;\r\n  display: grid;\r\n  gap: 2px;\n}\n.font-family[data-v-4992ee1f] {\r\n  font-size: 12px;\r\n  color: #e8f4f8;\n}\n.font-file[data-v-4992ee1f] {\r\n  font-size: 10px;\r\n  color: #9fb2c2;\r\n  word-break: break-all;\n}\n.font-empty[data-v-4992ee1f] {\r\n  margin: 0;\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.action-button[data-v-4992ee1f],\r\n.reset-button[data-v-4992ee1f] {\r\n  border: 1px solid rgba(147, 170, 184, 0.4);\r\n  border-radius: 6px;\r\n  background: linear-gradient(135deg, rgba(34, 43, 54, 0.95), rgba(25, 34, 44, 0.95));\r\n  color: #eff7fa;\r\n  cursor: pointer;\r\n  padding: 7px 10px;\r\n  font-size: 11px;\r\n  letter-spacing: 0.03em;\n}\n.compact-button[data-v-4992ee1f] {\r\n  padding: 5px 8px;\r\n  font-size: 10px;\n}\n.action-button[data-v-4992ee1f]:hover,\r\n.reset-button[data-v-4992ee1f]:hover {\r\n  border-color: rgba(135, 243, 206, 0.65);\n}\n.action-button[data-v-4992ee1f]:disabled,\r\n.reset-button[data-v-4992ee1f]:disabled {\r\n  opacity: 0.55;\r\n  cursor: not-allowed;\r\n  border-color: rgba(147, 170, 184, 0.24);\n}\n.hidden-input[data-v-4992ee1f] {\r\n  display: none;\n}\n.panel-footer[data-v-4992ee1f] {\r\n  display: flex;\r\n  justify-content: flex-end;\n}'));
+      elementStyle.appendChild(document.createTextNode('.theme-panel-root[data-v-e9d7459e] {\r\n  height: 100%;\r\n  display: grid;\r\n  grid-template-rows: auto auto auto auto auto auto auto auto;\r\n  gap: 10px;\r\n  padding: 10px;\r\n  color: #ececec;\r\n  background:\r\n    radial-gradient(120% 80% at 12% 0%, rgba(31, 199, 157, 0.22), transparent 62%),\r\n    linear-gradient(150deg, rgba(23, 29, 36, 0.96), rgba(17, 20, 25, 0.96));\r\n  border: 1px solid rgba(0, 209, 143, 0.3);\r\n  border-radius: 10px;\r\n  box-sizing: border-box;\r\n  overflow-y: auto;\r\n  font-family: "IBM Plex Sans", "Source Sans 3", sans-serif;\n}\n.panel-header h3[data-v-e9d7459e] {\r\n  margin: 0;\r\n  font-size: 15px;\r\n  letter-spacing: 0.03em;\n}\n.panel-header p[data-v-e9d7459e] {\r\n  margin: 4px 0 0;\r\n  font-size: 11px;\r\n  color: #9db2c2;\n}\n.preview-card[data-v-e9d7459e] {\r\n  border: 1px solid;\r\n  border-radius: 8px;\r\n  overflow: hidden;\n}\n.preview-header[data-v-e9d7459e] {\r\n  padding: 6px 8px;\r\n  font-weight: 600;\n}\n.preview-content[data-v-e9d7459e] {\r\n  padding: 8px;\r\n  display: grid;\r\n  gap: 6px;\n}\n.preview-subtext[data-v-e9d7459e] {\r\n  opacity: 0.82;\n}\n.panel-section[data-v-e9d7459e] {\r\n  border: 1px solid rgba(129, 149, 164, 0.24);\r\n  border-radius: 8px;\r\n  background: rgba(18, 24, 32, 0.72);\r\n  overflow: hidden;\n}\n.panel-section summary[data-v-e9d7459e] {\r\n  cursor: pointer;\r\n  padding: 8px;\r\n  font-size: 12px;\r\n  letter-spacing: 0.05em;\r\n  text-transform: uppercase;\r\n  color: #8cf2d2;\r\n  user-select: none;\n}\n.section-body[data-v-e9d7459e] {\r\n  padding: 0 8px 8px;\r\n  display: grid;\r\n  gap: 8px;\n}\n.control-row[data-v-e9d7459e] {\r\n  display: grid;\r\n  gap: 4px;\n}\n.control-grid[data-v-e9d7459e] {\r\n  display: grid;\r\n  grid-template-columns: repeat(2, minmax(0, 1fr));\r\n  gap: 8px;\n}\n.slot-grid[data-v-e9d7459e] {\r\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n}\n.control-row label[data-v-e9d7459e] {\r\n  font-size: 11px;\r\n  color: #c3d6e4;\n}\n.control-input[data-v-e9d7459e] {\r\n  width: 100%;\r\n  box-sizing: border-box;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(8, 12, 18, 0.7);\r\n  color: #ecf4fa;\r\n  padding: 6px 8px;\n}\n.control-input[type="range"][data-v-e9d7459e] {\r\n  padding: 0;\n}\n.slider-row span[data-v-e9d7459e] {\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.color-input[data-v-e9d7459e] {\r\n  padding: 0;\r\n  min-height: 30px;\n}\n.inline-controls[data-v-e9d7459e] {\r\n  display: flex;\r\n  flex-wrap: wrap;\r\n  gap: 8px;\n}\n.feedback-text[data-v-e9d7459e] {\r\n  margin: 0;\r\n  font-size: 11px;\n}\n.feedback-error[data-v-e9d7459e] {\r\n  color: #ff8b8b;\n}\n.feedback-info[data-v-e9d7459e] {\r\n  color: #8cf2d2;\n}\n.font-list[data-v-e9d7459e] {\r\n  display: grid;\r\n  gap: 6px;\n}\n.font-item[data-v-e9d7459e] {\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: space-between;\r\n  gap: 8px;\r\n  padding: 6px 8px;\r\n  border: 1px solid rgba(182, 208, 224, 0.2);\r\n  border-radius: 6px;\r\n  background: rgba(10, 14, 20, 0.72);\n}\n.font-meta[data-v-e9d7459e] {\r\n  min-width: 0;\r\n  display: grid;\r\n  gap: 2px;\n}\n.font-family[data-v-e9d7459e] {\r\n  font-size: 12px;\r\n  color: #e8f4f8;\n}\n.font-file[data-v-e9d7459e] {\r\n  font-size: 10px;\r\n  color: #9fb2c2;\r\n  word-break: break-all;\n}\n.font-empty[data-v-e9d7459e] {\r\n  margin: 0;\r\n  font-size: 11px;\r\n  color: #9fb2c2;\n}\n.action-button[data-v-e9d7459e],\r\n.reset-button[data-v-e9d7459e] {\r\n  border: 1px solid rgba(147, 170, 184, 0.4);\r\n  border-radius: 6px;\r\n  background: linear-gradient(135deg, rgba(34, 43, 54, 0.95), rgba(25, 34, 44, 0.95));\r\n  color: #eff7fa;\r\n  cursor: pointer;\r\n  padding: 7px 10px;\r\n  font-size: 11px;\r\n  letter-spacing: 0.03em;\n}\n.compact-button[data-v-e9d7459e] {\r\n  padding: 5px 8px;\r\n  font-size: 10px;\n}\n.action-button[data-v-e9d7459e]:hover,\r\n.reset-button[data-v-e9d7459e]:hover {\r\n  border-color: rgba(135, 243, 206, 0.65);\n}\n.action-button[data-v-e9d7459e]:disabled,\r\n.reset-button[data-v-e9d7459e]:disabled {\r\n  opacity: 0.55;\r\n  cursor: not-allowed;\r\n  border-color: rgba(147, 170, 184, 0.24);\n}\n.hidden-input[data-v-e9d7459e] {\r\n  display: none;\n}\n.panel-footer[data-v-e9d7459e] {\r\n  display: flex;\r\n  justify-content: flex-end;\n}'));
       document.head.appendChild(elementStyle);
     }
   } catch (e) {

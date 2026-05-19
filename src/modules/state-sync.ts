@@ -1,5 +1,3 @@
-export type OutlineEffect = "solid" | "static-glow" | "pulsing-glow" | "scanline";
-
 export type SlotKey =
   | "IMAGE"
   | "LATENT"
@@ -41,7 +39,6 @@ export interface ThemeUiMeta {
   bgColor: string;
   titleBgColor: string;
   outlineColor: string;
-  outlineEffect: OutlineEffect;
   activePresetId: string | null;
 }
 
@@ -153,13 +150,6 @@ const PRESET_CATEGORY_IDS = new Set<PresetCategoryId>(
   PRESET_CATEGORY_DEFINITIONS.map((category) => category.id),
 );
 
-const OUTLINE_EFFECTS: Set<OutlineEffect> = new Set([
-  "solid",
-  "static-glow",
-  "pulsing-glow",
-  "scanline",
-]);
-
 const SLOT_KEYS: SlotKey[] = [
   "IMAGE",
   "LATENT",
@@ -188,7 +178,6 @@ export const DEFAULT_THEME_UI_META: ThemeUiMeta = {
   bgColor: "#242424",
   titleBgColor: "#2f2f2f",
   outlineColor: "#00d18f",
-  outlineEffect: "solid",
   activePresetId: null,
 };
 
@@ -574,14 +563,6 @@ function sanitizeFamily(value: unknown, fallback: string): string {
   return text;
 }
 
-function sanitizeOutlineEffect(value: unknown, fallback: OutlineEffect): OutlineEffect {
-  const text = typeof value === "string" ? value : "";
-  if (OUTLINE_EFFECTS.has(text as OutlineEffect)) {
-    return text as OutlineEffect;
-  }
-  return fallback;
-}
-
 function sanitizePresetId(value: unknown, fallback: string): string {
   const text = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (PRESET_ID_RE.test(text)) {
@@ -621,7 +602,6 @@ function sanitizeUiMeta(value: unknown): ThemeUiMeta {
     bgColor: sanitizeColor(source.bgColor, DEFAULT_THEME_UI_META.bgColor),
     titleBgColor: sanitizeColor(source.titleBgColor, DEFAULT_THEME_UI_META.titleBgColor),
     outlineColor: sanitizeColor(source.outlineColor, DEFAULT_THEME_UI_META.outlineColor),
-    outlineEffect: sanitizeOutlineEffect(source.outlineEffect, DEFAULT_THEME_UI_META.outlineEffect),
     activePresetId: typeof source.activePresetId === "string" && source.activePresetId.trim()
       ? sanitizePresetId(source.activePresetId, DEFAULT_THEME_UI_META.activePresetId ?? "")
       : null,
@@ -735,7 +715,6 @@ function migrateLegacyState(source: Record<string, unknown>): ThemePanelState {
     bgColor,
     titleBgColor,
     outlineColor,
-    outlineEffect: source.outlineEffect,
     activePresetId: null,
   });
 

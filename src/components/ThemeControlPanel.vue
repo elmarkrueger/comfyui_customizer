@@ -144,15 +144,6 @@
           </div>
         </div>
 
-        <div class="control-row">
-          <label>Outline Effect</label>
-          <select v-model="state.uiMeta.outlineEffect" class="control-input" @change="emitChange">
-            <option value="solid">Solid Border</option>
-            <option value="static-glow">Static Glow</option>
-            <option value="pulsing-glow">Pulsing Glow</option>
-            <option value="scanline">Scanline</option>
-          </select>
-        </div>
       </div>
     </details>
 

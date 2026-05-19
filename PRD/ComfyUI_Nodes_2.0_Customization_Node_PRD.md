@@ -6,7 +6,7 @@ The fundamental architecture of the ComfyUI frontend has recently undergone a tr
 
 This Product Requirements Document establishes the comprehensive architectural blueprints, functional specifications, and implementation pathways for a new "Control Panel" Custom Node designed explicitly for the Nodes 2.0 ecosystem. Diverging from traditional execution nodes that process tensors, latent spaces, or image batches, this custom node functions entirely as an environmental interface. It operates with strictly zero inputs and zero outputs, existing upon the canvas as a persistent, localized dashboard.4 The primary utility of this control panel is to grant users granular, real-time authority over the typographical and thematic styling of their active workflow environment.
 
-The feature set mandated by this document includes the capacity to dynamically scale font sizes for specifically targeted sectors of the node interface—such as structural titles, operational text areas, and standard body text—bypassing the global limitations of standard canvas scaling.6 Furthermore, the interface will provide robust color selection mechanisms via integrated DOM-based color pickers, allowing precise manipulation of font colors, node backgrounds, header title backgrounds, and peripheral outlines. To elevate the visual experience, the node will introduce advanced visual effects for node outlines, leveraging modern CSS animations to generate glowing, pulsing, or stylized border treatments. Crucially, the system architecture dictates the implementation of a dedicated local directory for custom typographical assets, allowing users to physically store custom font files that the node will seamlessly parse, serve, and render selectable within the interface.7 By explicitly defining all backend Python routing, frontend Vue interactions, asset delivery mechanisms, and state serialization protocols, this document serves as a definitive, exhaustive guide designed to empower automated coding agents to execute the implementation with maximal efficiency and zero preliminary analytical overhead.
+The feature set mandated by this document includes the capacity to dynamically scale font sizes for specifically targeted sectors of the node interface—such as structural titles, operational text areas, and standard body text—bypassing the global limitations of standard canvas scaling.6 Furthermore, the interface will provide robust color selection mechanisms via integrated DOM-based color pickers, allowing precise manipulation of font colors, node backgrounds, header title backgrounds, and peripheral outlines. Outline styling is intentionally constrained to a single stable outline-color behavior rather than selectable animated effect modes. Crucially, the system architecture dictates the implementation of a dedicated local directory for custom typographical assets, allowing users to physically store custom font files that the node will seamlessly parse, serve, and render selectable within the interface.7 By explicitly defining all backend Python routing, frontend Vue interactions, asset delivery mechanisms, and state serialization protocols, this document serves as a definitive, exhaustive guide designed to empower automated coding agents to execute the implementation with maximal efficiency and zero preliminary analytical overhead.
 
 ## **Architectural Paradigm and the Nodes 2.0 Ecosystem**
 
@@ -78,7 +78,7 @@ The functional requirements dictate the creation of several specific HTML elemen
 1. **Sectional Font Size Controls**: Multiple \<input type="range"\> sliders must be created to control font sizes. Crucially, the requirement specifies targeting "specific sections of a node".6 Therefore, distinct sliders must be instantiated for the global node body, the node title headers, and multiline text areas.  
 2. **Color Selections**: Native HTML \<input type="color"\> elements must be implemented to allow users to select hex values for the primary font color, the node canvas background, and the title header background.  
 3. **Typographical Selection**: A standard \<select\> element must be instantiated. This dropdown will serve as the selection vector for the custom fonts discovered in the backend directory.  
-4. **Visual Effects Engine**: Two associated controls must be built for the node outline. A \<select\> dropdown must offer specific effect types (e.g., Solid Border, Pulsing Glow, Static Glow, Scanline Overlay). An associated \<input type="color"\> must allow the user to define the primary hue of the selected effect.
+4. **Outline Styling**: A single \<input type="color"\> control must allow the user to define the node outline hue. A selectable outline-effect mode dropdown is out of scope.
 
 To maintain compatibility with the ComfyUI Nodes 2.0 widgetValueStore and ensure that user configurations survive page reloads, each of these DOM elements must be strictly bound to the node's serialization engine.13 When invoking addDOMWidget, the options object must explicitly define getValue() and setValue(v) callback functions.28
 
@@ -100,7 +100,7 @@ Crucially, the manager must then execute customFont.load(), which returns a Prom
 
 Robust error handling is mandatory at this juncture. If a user places a corrupted or incompatible file into the /fonts/ directory, the customFont.load() Promise will transition to a failed state.20 The coding agent must implement a .catch() block that traps this failure, dispatches a UI notification warning the user of the corrupted asset, and gracefully degrades the CSS application to fall back to standard web-safe fonts (e.g., Arial, sans-serif) to prevent catastrophic layout collapse within the node graph.29
 
-## **Thematic Engine: CSS Injection and Visual Effects**
+## **Thematic Engine: CSS Injection and Outline Styling**
 
 The core mechanism by which the Control Panel exerts authority over the ComfyUI Nodes 2.0 environment is through dynamic, targeted CSS injection. In legacy iterations, altering node appearance required intercepting canvas rendering algorithms.8 In Nodes 2.0, the Vue components derive their visual properties from cascading stylesheets, explicitly relying on a complex hierarchy of CSS variables (custom properties) and scoped class names.6
 
@@ -123,22 +123,19 @@ The CSS compilation logic must generate rules adhering to the following topologi
 5. **Node Background Color**: Target the primary node wrapper. .comfy-node { background-color: var(--custom-bg-color)\!important; } .6  
 6. **Title Background Color**: Target the header specifically, overriding any default gradients or solid colors applied by the baseline theme. .comfy-node-title { background-color: var(--custom-title-bg-color)\!important; } .6
 
-### **Advanced Visual Effects for Node Outlines**
+### **Stable Outline Styling for Node Outlines**
 
-A standout feature of this PRD is the request for "visual effects for the outline." Under Nodes 2.0, nodes are fundamentally DOM \<div\> elements, meaning they fully support advanced CSS3 properties like box-shadow, border, and @keyframes animations.9
+A core requirement of this PRD is deterministic control over node outline styling using a single non-animated mode. Under Nodes 2.0, nodes are fundamentally DOM \<div\> elements, meaning they support CSS3 properties such as box-shadow and border.9
 
-The \<select\> dropdown dedicated to visual effects will pass a string identifier to the thematic engine, which will compile distinctly different CSS rules based on the selection, combining them with the hue derived from the outline color picker.
+The outline color control passes a hue value to the thematic engine, which compiles one deterministic rule for outline rendering.
 
-* **Solid Border**: The baseline implementation. The engine injects .comfy-node { border: 2px solid var(--custom-outline-color)\!important; } .  
-* **Static Glow**: Utilizes the drop-shadow property to create a diffuse halo around the node structure. .comfy-node { box-shadow: 0 0 15px 5px var(--custom-outline-color)\!important; border: 1px solid var(--custom-outline-color)\!important; } .  
-* **Pulsing Glow (Animated)**: Requires the injection of an associated CSS animation. The engine must first define an @keyframes block within the stylesheet, interpolating the box-shadow blur radius from a minimal state to an expansive state. @keyframes themePanelPulse { 0% { box-shadow: 0 0 5px var(--custom-outline-color); } 100% { box-shadow: 0 0 25px 10px var(--custom-outline-color); } }. The .comfy-node class is then targeted with animation: themePanelPulse 2s infinite alternate\!important;.  
-* **Cyberpunk Scanline**: Advanced thematic styling requested by modern UI designers.9 This can be achieved by utilizing a pseudo-element (::after) layered over the node boundary, applying a linear-gradient that utilizes transparent steps combined with the \--custom-outline-color, and animating its background position to simulate a sweeping scanner line over the node border.
+* **Stable Outline (Single Mode)**: The baseline and only supported implementation. The engine injects a non-animated outline treatment driven by --custom-outline-color (for example via inset box-shadow or border-equivalent styling on safe outline layers).
 
-By centralizing these visual transformations within a single dynamic stylesheet, the browser's hardware-accelerated rendering pipeline handles the animations, ensuring that the heavy visual modifications do not degrade the performance of the core ComfyUI graph execution.
+By centralizing this transformation within a single dynamic stylesheet rule, rendering remains stable and avoids the extra variability introduced by animated outline modes.
 
 ## **Data Persistence, Deserialization, and State Synchronization**
 
-A ubiquitous challenge in developing custom user interfaces within node-based graphs is guaranteeing data persistence. When a user spends considerable time fine-tuning exact hex colors, typographical scales, and glow effects, that exact state must be preserved when the workflow is exported to a JSON file and perfectly recreated when that JSON is subsequently loaded.25
+A ubiquitous challenge in developing custom user interfaces within node-based graphs is guaranteeing data persistence. When a user spends considerable time fine-tuning exact hex colors, typographical scales, and outline colors, that exact state must be preserved when the workflow is exported to a JSON file and perfectly recreated when that JSON is subsequently loaded.25
 
 Because the Control Panel lacks standard inputs and outputs, it relies wholly on the serialization of its internal widgets array. As defined in the DOM Widget Factory section, the getValue() hook ensures that during a save operation, ComfyUI iterates over the node, extracts the scalar values from the sliders, color pickers, and dropdowns, and embeds them securely into the workflow's structured JSON format.28
 
@@ -156,7 +153,7 @@ While the Nodes 2.0 Vue architecture provides a robust foundation for DOM-based 
 
 Although this PRD is explicitly targeted at the Nodes 2.0 environment, the ComfyUI frontend retains a toggle allowing users to revert to the legacy LiteGraph.js canvas rendering system.1 If a user disables Nodes 2.0, the Vue components (.comfy-node, .comfy-node-title) will cease to exist in the DOM, rendering the dynamic stylesheet injection entirely inert.
 
-A resilient extension must detect the active rendering paradigm. The css\_style\_injector.js module should evaluate the DOM environment upon initialization—for instance, by checking for the existence of the .comfy-vue-rendering class on the document body or utilizing global app state variables. If the legacy canvas system is detected, the extension should gracefully degrade. It should disable advanced CSS features like pulsing glows or outline animations (which cannot be replicated efficiently on a 2D canvas) and instead redirect the color picker outputs to modify the underlying LiteGraph configuration arrays directly (e.g., overriding app.canvas.clear\_background\_color or iterating through the graph to adjust the node.color and node.bgcolor properties).6
+A resilient extension must detect the active rendering paradigm. The css\_style\_injector.js module should evaluate the DOM environment upon initialization—for instance, by checking for the existence of the .comfy-vue-rendering class on the document body or utilizing global app state variables. If the legacy canvas system is detected, the extension should gracefully degrade. Because animated outline modes are out of scope, it should retain only the static outline color pathway and redirect color picker outputs to modify the underlying LiteGraph configuration arrays directly where needed (e.g., overriding app.canvas.clear\_background\_color or iterating through the graph to adjust the node.color and node.bgcolor properties).6
 
 ### **Performance Overhead and Event Throttling**
 
