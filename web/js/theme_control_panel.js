@@ -6683,6 +6683,24 @@ const CURATED_NODE_PRESET_PALETTES = [
     colors: ["#003049", "#1D4360", "#2F5F80", "#F77F00", "#FCBF49"]
   },
   {
+    id: "builtin-classic-chocolate-truffle",
+    name: "Chocolate Truffle",
+    category: "classic-elegant",
+    colors: ["#2C1E16", "#3E2723", "#5D4037", "#D7CCC8", "#E6C8A7"]
+  },
+  {
+    id: "builtin-classic-yacht-club",
+    name: "Yacht Club",
+    category: "classic-elegant",
+    colors: ["#1B263B", "#415A77", "#778DA9", "#E0E1DD", "#D8C3A5"]
+  },
+  {
+    id: "builtin-classic-quiet-luxury",
+    name: "Quiet Luxury",
+    category: "classic-elegant",
+    colors: ["#2C2B29", "#403D39", "#8E8D8A", "#CCC5B9", "#F4DFD0"]
+  },
+  {
     id: "builtin-nature-forest-retreat",
     name: "Forest Retreat",
     category: "nature-earth",
@@ -6699,6 +6717,24 @@ const CURATED_NODE_PRESET_PALETTES = [
     name: "Ocean Breeze",
     category: "nature-earth",
     colors: ["#03045E", "#023E8A", "#0077B6", "#00B4D8", "#90E0EF"]
+  },
+  {
+    id: "builtin-nature-mossy-cavern",
+    name: "Mossy Cavern",
+    category: "nature-earth",
+    colors: ["#1A2421", "#2C3E35", "#3E574B", "#7E998A", "#C2D5C4"]
+  },
+  {
+    id: "builtin-nature-desert-illusion",
+    name: "Desert Illusion",
+    category: "nature-earth",
+    colors: ["#2D2622", "#4A3F35", "#8B5F4D", "#D8A48F", "#A3B19B"]
+  },
+  {
+    id: "builtin-nature-olive-grove",
+    name: "Olive Grove",
+    category: "nature-earth",
+    colors: ["#283021", "#3B4731", "#5C6A4E", "#9AAB89", "#DCE3D0"]
   },
   {
     id: "builtin-modern-cyber-neon",
@@ -6719,6 +6755,24 @@ const CURATED_NODE_PRESET_PALETTES = [
     colors: ["#10002B", "#240046", "#3C096C", "#5A189A", "#7B2CBF"]
   },
   {
+    id: "builtin-modern-neon-noir",
+    name: "Neon Noir",
+    category: "modern-tech",
+    colors: ["#090909", "#151515", "#222222", "#39FF14", "#BF40FF"]
+  },
+  {
+    id: "builtin-modern-electric-fusion",
+    name: "Electric Fusion",
+    category: "modern-tech",
+    colors: ["#0B0C10", "#141B2D", "#1F2F54", "#2471A3", "#00F0FF"]
+  },
+  {
+    id: "builtin-modern-technicolor-dream",
+    name: "Technicolor Dream",
+    category: "modern-tech",
+    colors: ["#100C1A", "#1C142B", "#2A1D3D", "#FF00FF", "#7FFF00"]
+  },
+  {
     id: "builtin-pastel-cotton-candy-node",
     name: "Cotton Candy Node",
     category: "pastel-soft",
@@ -6737,6 +6791,24 @@ const CURATED_NODE_PRESET_PALETTES = [
     colors: ["#2E2A26", "#3C362F", "#4E473F", "#D5BDAF", "#EDF6F9"]
   },
   {
+    id: "builtin-pastel-lavender-fields",
+    name: "Lavender Fields",
+    category: "pastel-soft",
+    colors: ["#282634", "#3D394E", "#615A7A", "#BCA0DC", "#F4E0FF"]
+  },
+  {
+    id: "builtin-pastel-morning-dew",
+    name: "Morning Dew",
+    category: "pastel-soft",
+    colors: ["#212E2E", "#304445", "#476161", "#89B5AF", "#B2D8D8"]
+  },
+  {
+    id: "builtin-pastel-cotton-candy-sky",
+    name: "Cotton Candy Sky",
+    category: "pastel-soft",
+    colors: ["#252131", "#363247", "#524B6B", "#FFB6C1", "#AEEEEE"]
+  },
+  {
     id: "builtin-vibrant-sunset-pop-node",
     name: "Sunset Pop Node",
     category: "vibrant-bold",
@@ -6753,6 +6825,24 @@ const CURATED_NODE_PRESET_PALETTES = [
     name: "Vibrant Citric Node",
     category: "vibrant-bold",
     colors: ["#1E2422", "#2B3632", "#3A4A45", "#FF9F1C", "#2EC4B6"]
+  },
+  {
+    id: "builtin-vibrant-mango-popsicle",
+    name: "Mango Popsicle",
+    category: "vibrant-bold",
+    colors: ["#2B1A10", "#4A2711", "#823A12", "#FF7F11", "#FFD166"]
+  },
+  {
+    id: "builtin-vibrant-fireworks",
+    name: "Fireworks",
+    category: "vibrant-bold",
+    colors: ["#1C0B11", "#3B111E", "#6B1426", "#D90429", "#FF9F1C"]
+  },
+  {
+    id: "builtin-vibrant-tropical-punch",
+    name: "Tropical Punch",
+    category: "vibrant-bold",
+    colors: ["#24101A", "#451B2D", "#6F2040", "#FF477E", "#FFCA3A"]
   }
 ];
 const BUILTIN_PRESETS = [
