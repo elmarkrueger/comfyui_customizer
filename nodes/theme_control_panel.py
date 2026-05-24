@@ -16,6 +16,7 @@ _PRESET_CATEGORIES = {
     "modern-tech",
     "pastel-soft",
     "vibrant-bold",
+    "dark-lucifer",
     "legacy",
     "custom",
 }

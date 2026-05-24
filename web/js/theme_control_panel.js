@@ -6510,6 +6510,7 @@ const PRESET_CATEGORY_DEFINITIONS = [
   { id: "modern-tech", label: "Modern & Tech" },
   { id: "pastel-soft", label: "Pastel & Soft" },
   { id: "vibrant-bold", label: "Vibrant & Bold" },
+  { id: "dark-lucifer", label: "Dark & Lucifer" },
   { id: "legacy", label: "Legacy" },
   { id: "custom", label: "Custom" }
 ];
@@ -6843,6 +6844,42 @@ const CURATED_NODE_PRESET_PALETTES = [
     name: "Tropical Punch",
     category: "vibrant-bold",
     colors: ["#24101A", "#451B2D", "#6F2040", "#FF477E", "#FFCA3A"]
+  },
+  {
+    id: "builtin-dark-lucifer-wrath",
+    name: "Lucifer's Wrath",
+    category: "dark-lucifer",
+    colors: ["#000000", "#1D0B0B", "#171414", "#FF1A1A", "#FF5D00"]
+  },
+  {
+    id: "builtin-dark-lucifer-hellfire",
+    name: "Hellfire",
+    category: "dark-lucifer",
+    colors: ["#121212", "#231B16", "#252525", "#FF7700", "#FFB700"]
+  },
+  {
+    id: "builtin-dark-lucifer-abyssal-ash",
+    name: "Abyssal Ash",
+    category: "dark-lucifer",
+    colors: ["#1C1C1C", "#2D2D2D", "#333333", "#CC0000", "#E65C00"]
+  },
+  {
+    id: "builtin-dark-lucifer-brimstone",
+    name: "Brimstone",
+    category: "dark-lucifer",
+    colors: ["#151515", "#2C221A", "#2C2C2C", "#FFD000", "#FF6200"]
+  },
+  {
+    id: "builtin-dark-lucifer-obsidian-eclipse",
+    name: "Obsidian Eclipse",
+    category: "dark-lucifer",
+    colors: ["#080808", "#1A1A1A", "#242424", "#FF2A4B", "#FF007F"]
+  },
+  {
+    id: "builtin-dark-lucifer-nether-portal",
+    name: "Nether Portal",
+    category: "dark-lucifer",
+    colors: ["#1B1B1B", "#2A1D33", "#2C2C2C", "#E0115F", "#FF4500"]
   }
 ];
 const BUILTIN_PRESETS = [
