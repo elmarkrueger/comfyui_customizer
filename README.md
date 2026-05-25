@@ -2,13 +2,69 @@
 
 This repository contains a standalone custom node pack for ComfyUI Nodes 2.0.
 
-## Included Node
+## Included Nodes
 
 - Duffy_ThemeControlPanel
   - Frontend utility node with no visible ports
   - Persists panel state in hidden socketless JSON
   - Applies global Nodes 2.0 styling with a versioned state model
   - Supports preset workflows (built-in and custom)
+- Duffy_RealTimeGradingProcessor
+  - Real-time post-processing and color grading node for IMAGE tensors
+  - Persists grading controls in hidden socketless JSON
+  - Applies RGB tonal curves, gradient map blending, and cinematic post effects
+  - Emits compare preview thumbnails and histogram UI telemetry
+
+## Real-Time Shader & Grading Processor
+
+Node ID: Duffy_RealTimeGradingProcessor
+
+- Category: Duffy/PostProcessing
+- Display Name: Real-Time Shader & Grading Processor
+- Input: IMAGE + hidden shader_params JSON
+- Output: processed IMAGE
+
+Feature overview:
+
+- Before/After compare viewport with a draggable wipe control
+- RGB master and per-channel tonal curve editing
+- Color balancing via gradient map stops, blend mode, and opacity
+- Post effects including chromatic aberration, film grain, sharpen, and vignette
+
+![Real-Time Shader & Grading Processor UI](images/real_time_shader_grading_processor.jpg)
+
+Quick usage:
+
+1. Add an image source node (for example, Load Image) and connect it to Duffy_RealTimeGradingProcessor.image.
+2. Connect Duffy_RealTimeGradingProcessor.image output to your preview/save node.
+3. Open the node UI and adjust curves, gradient map, and post-effects; the node writes settings to hidden shader_params automatically.
+4. Queue prompt to process the image and view before/after compare thumbnails in the embedded panel.
+
+Example shader_params payload (reference):
+
+```json
+{
+  "chromatic_aberration": 0.08,
+  "film_grain": 0.05,
+  "sharpen": 0.35,
+  "vignette_intensity": 0.45,
+  "curves": {
+    "rgb": [[0.0, 0.0], [0.5, 0.42], [1.0, 1.0]],
+    "r": [[0.0, 0.0], [1.0, 1.0]],
+    "g": [[0.0, 0.0], [1.0, 1.0]],
+    "b": [[0.0, 0.0], [1.0, 1.0]]
+  },
+  "gradient_map": {
+    "enabled": true,
+    "blending_mode": "Normal",
+    "opacity": 0.84,
+    "stops": [
+      { "offset": 0.0, "color": "#111111" },
+      { "offset": 1.0, "color": "#F2F2F2" }
+    ]
+  }
+}
+```
 
 ## v2 Highlights
 

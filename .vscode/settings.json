@@ -1,0 +1,16 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^& \"F:\\\\ComfyUI-Easy-Install\\\\python_embeded\\\\python\\.exe\" -c \"import sys; sys\\.path\\.insert\\(0, r'F:\\\\ComfyUI-Easy-Install\\\\ComfyUI'\\); sys\\.path\\.insert\\(0, r'd:\\\\'\\); import comfyui_customizer\\.nodes\\.real_time_grading_processor as m; print\\('module_import_ok'\\); print\\(m\\.DuffyRealTimeGradingProcessor\\.define_schema\\(\\)\\); print\\('schema_ok'\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --check web/js/real_time_grading_processor\\.js; node --check web/js/_plugin-vue_export-helper-83BykQa1\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^\\$paths = @\\('F:\\\\ComfyUI-Easy-Install\\\\ComfyUI\\\\temp','D:\\\\ComfyUI-Easy-Install\\\\ComfyUI\\\\temp',\\(Join-Path \\(Get-Location\\) 'temp'\\),'D:\\\\comfyui_customizer\\\\temp'\\); \\$existing = \\$paths \\| Where-Object \\{ Test-Path \\$_ -PathType Container \\} \\| Select-Object -Unique; Write-Output \"Checked paths:\"; \\$paths \\| ForEach-Object \\{ \" - \\$_ : \" \\+ \\(Test-Path \\$_ -PathType Container\\) \\}; if \\(-not \\$existing\\) \\{ Write-Output 'No candidate temp directories exist\\.'; exit 0 \\}; Get-ChildItem -Path \\$existing -Recurse -File -ErrorAction SilentlyContinue \\| Where-Object \\{ \\$_\\.Name -like 'duffy_grading_input_\\*\\.png' -or \\$_\\.Name -like 'duffy_grading_output_\\*\\.png' \\} \\| Sort-Object LastWriteTime -Descending \\| Select-Object -First 10 @\\{Name='FullPath';Expression=\\{\\$_\\.FullName\\}\\}, @\\{Name='SizeBytes';Expression=\\{\\$_\\.Length\\}\\}, @\\{Name='ModifiedTime';Expression=\\{\\$_\\.LastWriteTime\\}\\} \\| Format-Table -AutoSize \\| Out-String -Width 4096$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

@@ -12,6 +12,7 @@ export default defineConfig({
     lib: {
       entry: {
         theme_control_panel: "./src/theme_control_panel.ts",
+        real_time_grading_processor: "./src/real_time_grading_processor.ts",
       },
       formats: ["es"],
     },
