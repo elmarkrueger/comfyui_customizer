@@ -14,6 +14,35 @@ This repository contains a standalone custom node pack for ComfyUI Nodes 2.0.
   - Persists grading controls in hidden socketless JSON
   - Applies RGB tonal curves, gradient map blending, and cinematic post effects
   - Emits compare preview thumbnails and histogram UI telemetry
+- Duffy_LatentScalingCalculator
+  - Dynamic latent resizer with aspect-ratio-locked scaling for LATENT tensors
+  - Supports model-family factor selection (Flux 1, Flux 2, SD3)
+  - Emits calculated target dimensions and validation warnings as UI telemetry
+  - Includes a Vue-based interactive panel with live dimension previews
+
+## Dynamic Latent Scaling & Dimension Calculator
+
+Node ID: Duffy_LatentScalingCalculator
+
+- Category: Duffy/Latent
+- Display Name: Dynamic Latent Scaling & Dimension Calculator
+- Inputs: LATENT samples, VAE, reduced_image_size, target_size, model_family
+- Outputs: scaled LATENT, calc_width, calc_height
+
+Feature overview:
+
+- Aspect-ratio-preserving latent scaling based on source latent dimensions
+- Architecture-aware spatial factor mapping (Flux 1 and SD3 use f=8, Flux 2 uses f=6)
+- Floor alignment for reduced size and ceiling alignment for target size to keep VAE divisibility
+- Built-in dimensional collapse protection for extreme aspect ratios or undersized inputs
+- Channel-depth compatibility warnings surfaced to the frontend panel
+
+Quick usage:
+
+1. Connect a LATENT source to Duffy_LatentScalingCalculator.samples.
+2. Select model_family to match the downstream diffusion architecture.
+3. Set reduced_image_size for scaled latent generation and target_size for final dimension guidance.
+4. Queue prompt, then read calc_width and calc_height outputs or view telemetry in the node panel.
 
 ## Real-Time Shader & Grading Processor
 

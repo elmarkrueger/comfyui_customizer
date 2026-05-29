@@ -13,6 +13,7 @@ export default defineConfig({
       entry: {
         theme_control_panel: "./src/theme_control_panel.ts",
         real_time_grading_processor: "./src/real_time_grading_processor.ts",
+        latent_scaling_calculator: "./src/latent_scaling_calculator.ts",
       },
       formats: ["es"],
     },
