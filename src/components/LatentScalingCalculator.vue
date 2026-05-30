@@ -3,7 +3,7 @@
     <header class="card-header">
       <div class="header-main">
         <h3 class="header-title">Dynamic Latent Scaling</h3>
-        <span class="header-badge" :style="accentStyle">{{ modelFamily }} [f={{ factor }}]</span>
+        <span class="header-badge" :style="accentStyle">{{ modelFamily }} [f={{ factorLabel }}]</span>
       </div>
       <p class="header-subtitle">Nodes 2.0 Aspect-Locked Resizer</p>
     </header>
@@ -16,7 +16,7 @@
         </div>
         <select v-model="modelFamily" class="styled-select" @change="onFamilyChange">
           <option value="Flux 1">Flux 1 (f=8)</option>
-          <option value="Flux 2">Flux 2 (f=6)</option>
+          <option value="Flux 2">Flux 2 (variant f=6/f=16)</option>
           <option value="SD3">Stable Diffusion 3 (f=8)</option>
         </select>
       </div>
@@ -47,7 +47,7 @@
           />
         </div>
         <div v-if="reducedSize !== coercedReducedSize" class="coercion-pill warning">
-          ⚠️ Divisibility Coercion: {{ reducedSize }} -> {{ coercedReducedSize }} px
+          ⚠️ Round Alignment: {{ reducedSize }} -> {{ coercedReducedSize }} px
         </div>
       </div>
 
@@ -77,7 +77,7 @@
           />
         </div>
         <div v-if="targetSize !== coercedTargetSize" class="coercion-pill info">
-          ⚡ Ceiling Alignment: {{ targetSize }} -> {{ coercedTargetSize }} px
+          ⚡ Round Alignment: {{ targetSize }} -> {{ coercedTargetSize }} px
         </div>
       </div>
 
@@ -85,7 +85,7 @@
       <div v-if="isCollapsed" class="alert-box error">
         <span class="alert-title">🚨 Dimensional Collapse</span>
         <p class="alert-desc">
-          Aspect ratio reduces the short side below 8 blocks (64px). Increase Reduced Image Size!
+          Aspect ratio reduces the short side below 8 blocks ({{ minPixels }}px). Increase Reduced Image Size!
         </p>
       </div>
 
@@ -110,7 +110,7 @@
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" rx="6" />
 
-            <!-- Target Size Outline (Ceil Aligned) -->
+            <!-- Target Size Outline (Round Aligned) -->
             <rect
               v-if="!isCollapsed"
               :x="outerBox.x"
@@ -124,7 +124,7 @@
               rx="2"
             />
 
-            <!-- Reduced Size Box (Floor Aligned) -->
+            <!-- Reduced Size Box (Round Aligned) -->
             <rect
               v-if="!isCollapsed"
               :x="innerBox.x"
@@ -138,7 +138,7 @@
               class="pulse-glow"
             />
           </svg>
-          <div class="aspect-ratio-label">Ratio: {{ currentAr.toFixed(2) }} ({{ aspectFraction }})</div>
+          <div class="aspect-ratio-label">{{ aspectRatioLabel }}</div>
         </div>
 
         <!-- Dimension List Previews -->
@@ -148,6 +148,14 @@
             <span class="tel-val highlight">
               {{ telemetry.inputWidth ? `${telemetry.inputWidth} × ${telemetry.inputHeight} px` : 'Pending execution...' }}
             </span>
+          </div>
+          <div class="telemetry-row">
+            <span class="tel-label">Backend Factor:</span>
+            <span class="tel-val highlight">{{ backendFactorLabel }}</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="tel-label">Resize Domain:</span>
+            <span class="tel-val highlight">{{ resizeModeLabel }}</span>
           </div>
           <div class="telemetry-row">
             <span class="tel-label">Reduced Latent:</span>
@@ -194,31 +202,75 @@ const telemetry = ref({
   inputWidth: 0,
   inputHeight: 0,
   inputChannels: 0,
+  vaeFactor: 0,
+  factorSource: "",
+  resizeMode: "",
   warnings: [] as string[],
   executedModelFamily: ""
 });
 
-// Spatial factor (f)
-const factor = computed(() => {
+function roundHalfUp(value: number): number {
+  return Math.floor(value + 0.5);
+}
+
+function alignToFactor(value: number, f: number): number {
+  return Math.max(f, roundHalfUp(value / f) * f);
+}
+
+const expectedFactor = computed(() => {
   if (modelFamily.value === "Flux 2") return 6;
   return 8;
 });
 
+// Spatial factor (f). If backend telemetry is present, use VAE-derived factor.
+const factor = computed(() => {
+  return telemetry.value.vaeFactor > 0 ? telemetry.value.vaeFactor : expectedFactor.value;
+});
+
+const factorLabel = computed(() => {
+  if (telemetry.value.vaeFactor > 0) return String(telemetry.value.vaeFactor);
+  if (modelFamily.value === "Flux 2") return "6/16";
+  return String(expectedFactor.value);
+});
+
+const minPixels = computed(() => 8 * factor.value);
+
+const backendFactorLabel = computed(() => {
+  if (!telemetry.value.vaeFactor) return "Pending execution...";
+  const source = telemetry.value.factorSource || "vae metadata";
+  return `f=${telemetry.value.vaeFactor} (${source})`;
+});
+
+const resizeModeLabel = computed(() => {
+  if (!telemetry.value.resizeMode) return "Pending execution...";
+  if (telemetry.value.resizeMode === "pixel") return "Pixel (decode -> resize -> encode)";
+  return "Latent";
+});
+
 // Math Coercions
 const coercedReducedSize = computed(() => {
-  return Math.floor(reducedSize.value / factor.value) * factor.value;
+  return alignToFactor(reducedSize.value, factor.value);
 });
 
 const coercedTargetSize = computed(() => {
-  return Math.ceil(targetSize.value / factor.value) * factor.value;
+  return alignToFactor(targetSize.value, factor.value);
 });
+
+const hasInputTelemetry = computed(() => telemetry.value.inputWidth > 0 && telemetry.value.inputHeight > 0);
 
 // Aspect Ratio determination (prioritize telemetry if available, fallback to square)
 const currentAr = computed(() => {
-  if (telemetry.value.inputWidth && telemetry.value.inputHeight) {
+  if (hasInputTelemetry.value) {
     return telemetry.value.inputWidth / telemetry.value.inputHeight;
   }
   return 1.0;
+});
+
+const aspectRatioLabel = computed(() => {
+  if (!hasInputTelemetry.value) {
+    return "Ratio: pending execution...";
+  }
+  return `Ratio: ${currentAr.value.toFixed(2)} (${aspectFraction.value})`;
 });
 
 const aspectFraction = computed(() => {
@@ -240,13 +292,13 @@ const coercedReducedWidth = computed(() => {
   const ar = currentAr.value;
   const aligned = coercedReducedSize.value;
   if (ar >= 1.0) return aligned;
-  return Math.floor(Math.round(aligned * ar) / factor.value) * factor.value;
+  return alignToFactor(aligned * ar, factor.value);
 });
 
 const coercedReducedHeight = computed(() => {
   const ar = currentAr.value;
   const aligned = coercedReducedSize.value;
-  if (ar >= 1.0) return Math.floor(Math.round(aligned / ar) / factor.value) * factor.value;
+  if (ar >= 1.0) return alignToFactor(aligned / ar, factor.value);
   return aligned;
 });
 
@@ -262,13 +314,13 @@ const calculatedTargetWidth = computed(() => {
   const newAr = wLatent.value / hLatent.value;
   const alignedTarget = coercedTargetSize.value;
   if (newAr >= 1.0) return alignedTarget;
-  return Math.floor(Math.round(alignedTarget * newAr) / factor.value) * factor.value;
+  return alignToFactor(alignedTarget * newAr, factor.value);
 });
 
 const calculatedTargetHeight = computed(() => {
   const newAr = wLatent.value / hLatent.value;
   const alignedTarget = coercedTargetSize.value;
-  if (newAr >= 1.0) return Math.floor(Math.round(alignedTarget / newAr) / factor.value) * factor.value;
+  if (newAr >= 1.0) return alignToFactor(alignedTarget / newAr, factor.value);
   return alignedTarget;
 });
 
@@ -367,7 +419,18 @@ function hydrateState(data: { reducedSize?: number; targetSize?: number; modelFa
 
 // Update telemetry from execution results
 function setTelemetry(data: any) {
-  telemetry.value = data;
+  telemetry.value = {
+    calcWidth: data?.calcWidth ?? 0,
+    calcHeight: data?.calcHeight ?? 0,
+    inputWidth: data?.inputWidth ?? 0,
+    inputHeight: data?.inputHeight ?? 0,
+    inputChannels: data?.inputChannels ?? 0,
+    vaeFactor: data?.vaeFactor ?? 0,
+    factorSource: data?.factorSource ?? "",
+    resizeMode: data?.resizeMode ?? "",
+    warnings: Array.isArray(data?.warnings) ? data.warnings : [],
+    executedModelFamily: data?.executedModelFamily ?? ""
+  };
 }
 
 // Dynamic Height Adjustment based on validation warning visibility

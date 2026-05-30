@@ -23,25 +23,30 @@ const _hoisted_13 = {
   key: 0,
   class: "alert-box error"
 };
-const _hoisted_14 = {
+const _hoisted_14 = { class: "alert-desc" };
+const _hoisted_15 = {
   key: 1,
   class: "alert-box warning-box"
 };
-const _hoisted_15 = { class: "preview-container" };
-const _hoisted_16 = { class: "visualizer-wrapper" };
-const _hoisted_17 = {
+const _hoisted_16 = { class: "preview-container" };
+const _hoisted_17 = { class: "visualizer-wrapper" };
+const _hoisted_18 = {
   viewBox: "0 0 120 120",
   class: "svg-canvas"
 };
-const _hoisted_18 = ["x", "y", "width", "height"];
-const _hoisted_19 = ["x", "y", "width", "height", "fill", "stroke"];
-const _hoisted_20 = { class: "aspect-ratio-label" };
-const _hoisted_21 = { class: "telemetry-info" };
-const _hoisted_22 = { class: "telemetry-row" };
-const _hoisted_23 = { class: "tel-val highlight" };
-const _hoisted_24 = { class: "telemetry-row" };
-const _hoisted_25 = { class: "latent-block-size" };
-const _hoisted_26 = { class: "telemetry-row" };
+const _hoisted_19 = ["x", "y", "width", "height"];
+const _hoisted_20 = ["x", "y", "width", "height", "fill", "stroke"];
+const _hoisted_21 = { class: "aspect-ratio-label" };
+const _hoisted_22 = { class: "telemetry-info" };
+const _hoisted_23 = { class: "telemetry-row" };
+const _hoisted_24 = { class: "tel-val highlight" };
+const _hoisted_25 = { class: "telemetry-row" };
+const _hoisted_26 = { class: "tel-val highlight" };
+const _hoisted_27 = { class: "telemetry-row" };
+const _hoisted_28 = { class: "tel-val highlight" };
+const _hoisted_29 = { class: "telemetry-row" };
+const _hoisted_30 = { class: "latent-block-size" };
+const _hoisted_31 = { class: "telemetry-row" };
 const _sfc_main = /* @__PURE__ */ defineComponent({
   __name: "LatentScalingCalculator",
   props: {
@@ -65,24 +70,59 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       inputWidth: 0,
       inputHeight: 0,
       inputChannels: 0,
+      vaeFactor: 0,
+      factorSource: "",
+      resizeMode: "",
       warnings: [],
       executedModelFamily: ""
     });
-    const factor = computed(() => {
+    function roundHalfUp(value) {
+      return Math.floor(value + 0.5);
+    }
+    function alignToFactor(value, f) {
+      return Math.max(f, roundHalfUp(value / f) * f);
+    }
+    const expectedFactor = computed(() => {
       if (modelFamily.value === "Flux 2") return 6;
       return 8;
     });
+    const factor = computed(() => {
+      return telemetry.value.vaeFactor > 0 ? telemetry.value.vaeFactor : expectedFactor.value;
+    });
+    const factorLabel = computed(() => {
+      if (telemetry.value.vaeFactor > 0) return String(telemetry.value.vaeFactor);
+      if (modelFamily.value === "Flux 2") return "6/16";
+      return String(expectedFactor.value);
+    });
+    const minPixels = computed(() => 8 * factor.value);
+    const backendFactorLabel = computed(() => {
+      if (!telemetry.value.vaeFactor) return "Pending execution...";
+      const source = telemetry.value.factorSource || "vae metadata";
+      return `f=${telemetry.value.vaeFactor} (${source})`;
+    });
+    const resizeModeLabel = computed(() => {
+      if (!telemetry.value.resizeMode) return "Pending execution...";
+      if (telemetry.value.resizeMode === "pixel") return "Pixel (decode -> resize -> encode)";
+      return "Latent";
+    });
     const coercedReducedSize = computed(() => {
-      return Math.floor(reducedSize.value / factor.value) * factor.value;
+      return alignToFactor(reducedSize.value, factor.value);
     });
     const coercedTargetSize = computed(() => {
-      return Math.ceil(targetSize.value / factor.value) * factor.value;
+      return alignToFactor(targetSize.value, factor.value);
     });
+    const hasInputTelemetry = computed(() => telemetry.value.inputWidth > 0 && telemetry.value.inputHeight > 0);
     const currentAr = computed(() => {
-      if (telemetry.value.inputWidth && telemetry.value.inputHeight) {
+      if (hasInputTelemetry.value) {
         return telemetry.value.inputWidth / telemetry.value.inputHeight;
       }
       return 1;
+    });
+    const aspectRatioLabel = computed(() => {
+      if (!hasInputTelemetry.value) {
+        return "Ratio: pending execution...";
+      }
+      return `Ratio: ${currentAr.value.toFixed(2)} (${aspectFraction.value})`;
     });
     const aspectFraction = computed(() => {
       const ar = currentAr.value;
@@ -101,12 +141,12 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       const ar = currentAr.value;
       const aligned = coercedReducedSize.value;
       if (ar >= 1) return aligned;
-      return Math.floor(Math.round(aligned * ar) / factor.value) * factor.value;
+      return alignToFactor(aligned * ar, factor.value);
     });
     const coercedReducedHeight = computed(() => {
       const ar = currentAr.value;
       const aligned = coercedReducedSize.value;
-      if (ar >= 1) return Math.floor(Math.round(aligned / ar) / factor.value) * factor.value;
+      if (ar >= 1) return alignToFactor(aligned / ar, factor.value);
       return aligned;
     });
     const wLatent = computed(() => coercedReducedWidth.value / factor.value);
@@ -118,12 +158,12 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       const newAr = wLatent.value / hLatent.value;
       const alignedTarget = coercedTargetSize.value;
       if (newAr >= 1) return alignedTarget;
-      return Math.floor(Math.round(alignedTarget * newAr) / factor.value) * factor.value;
+      return alignToFactor(alignedTarget * newAr, factor.value);
     });
     const calculatedTargetHeight = computed(() => {
       const newAr = wLatent.value / hLatent.value;
       const alignedTarget = coercedTargetSize.value;
-      if (newAr >= 1) return Math.floor(Math.round(alignedTarget / newAr) / factor.value) * factor.value;
+      if (newAr >= 1) return alignToFactor(alignedTarget / newAr, factor.value);
       return alignedTarget;
     });
     const outerBox = computed(() => {
@@ -200,7 +240,18 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       if (typeof data.modelFamily === "string") modelFamily.value = data.modelFamily;
     }
     function setTelemetry(data) {
-      telemetry.value = data;
+      telemetry.value = {
+        calcWidth: data?.calcWidth ?? 0,
+        calcHeight: data?.calcHeight ?? 0,
+        inputWidth: data?.inputWidth ?? 0,
+        inputHeight: data?.inputHeight ?? 0,
+        inputChannels: data?.inputChannels ?? 0,
+        vaeFactor: data?.vaeFactor ?? 0,
+        factorSource: data?.factorSource ?? "",
+        resizeMode: data?.resizeMode ?? "",
+        warnings: Array.isArray(data?.warnings) ? data.warnings : [],
+        executedModelFamily: data?.executedModelFamily ?? ""
+      };
     }
     watch([isCollapsed, () => telemetry.value.warnings], () => {
       let height = 360;
@@ -224,7 +275,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
             createBaseVNode("span", {
               class: "header-badge",
               style: normalizeStyle(accentStyle.value)
-            }, toDisplayString(modelFamily.value) + " [f=" + toDisplayString(factor.value) + "]", 5)
+            }, toDisplayString(modelFamily.value) + " [f=" + toDisplayString(factorLabel.value) + "]", 5)
           ]),
           _cache[6] || (_cache[6] = createBaseVNode("p", { class: "header-subtitle" }, "Nodes 2.0 Aspect-Locked Resizer", -1))
         ]),
@@ -239,7 +290,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               onChange: onFamilyChange
             }, [..._cache[7] || (_cache[7] = [
               createBaseVNode("option", { value: "Flux 1" }, "Flux 1 (f=8)", -1),
-              createBaseVNode("option", { value: "Flux 2" }, "Flux 2 (f=6)", -1),
+              createBaseVNode("option", { value: "Flux 2" }, "Flux 2 (variant f=6/f=16)", -1),
               createBaseVNode("option", { value: "SD3" }, "Stable Diffusion 3 (f=8)", -1)
             ])], 544), [
               [vModelSelect, modelFamily.value]
@@ -287,7 +338,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                 ]
               ])
             ]),
-            reducedSize.value !== coercedReducedSize.value ? (openBlock(), createElementBlock("div", _hoisted_8, " ⚠️ Divisibility Coercion: " + toDisplayString(reducedSize.value) + " -> " + toDisplayString(coercedReducedSize.value) + " px ", 1)) : createCommentVNode("", true)
+            reducedSize.value !== coercedReducedSize.value ? (openBlock(), createElementBlock("div", _hoisted_8, " ⚠️ Round Alignment: " + toDisplayString(reducedSize.value) + " -> " + toDisplayString(coercedReducedSize.value) + " px ", 1)) : createCommentVNode("", true)
           ]),
           createBaseVNode("div", _hoisted_9, [
             createBaseVNode("div", _hoisted_10, [
@@ -331,13 +382,13 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                 ]
               ])
             ]),
-            targetSize.value !== coercedTargetSize.value ? (openBlock(), createElementBlock("div", _hoisted_12, " ⚡ Ceiling Alignment: " + toDisplayString(targetSize.value) + " -> " + toDisplayString(coercedTargetSize.value) + " px ", 1)) : createCommentVNode("", true)
+            targetSize.value !== coercedTargetSize.value ? (openBlock(), createElementBlock("div", _hoisted_12, " ⚡ Round Alignment: " + toDisplayString(targetSize.value) + " -> " + toDisplayString(coercedTargetSize.value) + " px ", 1)) : createCommentVNode("", true)
           ]),
-          isCollapsed.value ? (openBlock(), createElementBlock("div", _hoisted_13, [..._cache[11] || (_cache[11] = [
-            createBaseVNode("span", { class: "alert-title" }, "🚨 Dimensional Collapse", -1),
-            createBaseVNode("p", { class: "alert-desc" }, " Aspect ratio reduces the short side below 8 blocks (64px). Increase Reduced Image Size! ", -1)
-          ])])) : createCommentVNode("", true),
-          telemetry.value.warnings && telemetry.value.warnings.length > 0 ? (openBlock(), createElementBlock("div", _hoisted_14, [
+          isCollapsed.value ? (openBlock(), createElementBlock("div", _hoisted_13, [
+            _cache[11] || (_cache[11] = createBaseVNode("span", { class: "alert-title" }, "🚨 Dimensional Collapse", -1)),
+            createBaseVNode("p", _hoisted_14, " Aspect ratio reduces the short side below 8 blocks (" + toDisplayString(minPixels.value) + "px). Increase Reduced Image Size! ", 1)
+          ])) : createCommentVNode("", true),
+          telemetry.value.warnings && telemetry.value.warnings.length > 0 ? (openBlock(), createElementBlock("div", _hoisted_15, [
             _cache[12] || (_cache[12] = createBaseVNode("span", { class: "alert-title" }, "⚠️ Compatibility Alert", -1)),
             (openBlock(true), createElementBlock(Fragment, null, renderList(telemetry.value.warnings, (warn, index) => {
               return openBlock(), createElementBlock("p", {
@@ -346,9 +397,9 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               }, toDisplayString(warn), 1);
             }), 128))
           ])) : createCommentVNode("", true),
-          createBaseVNode("div", _hoisted_15, [
-            createBaseVNode("div", _hoisted_16, [
-              (openBlock(), createElementBlock("svg", _hoisted_17, [
+          createBaseVNode("div", _hoisted_16, [
+            createBaseVNode("div", _hoisted_17, [
+              (openBlock(), createElementBlock("svg", _hoisted_18, [
                 _cache[13] || (_cache[13] = createBaseVNode("defs", null, [
                   createBaseVNode("pattern", {
                     id: "grid",
@@ -381,7 +432,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                   "stroke-width": "1.5",
                   "stroke-dasharray": "3 3",
                   rx: "2"
-                }, null, 8, _hoisted_18)) : createCommentVNode("", true),
+                }, null, 8, _hoisted_19)) : createCommentVNode("", true),
                 !isCollapsed.value ? (openBlock(), createElementBlock("rect", {
                   key: 1,
                   x: innerBox.value.x,
@@ -393,27 +444,35 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                   "stroke-width": "1.5",
                   rx: "2",
                   class: "pulse-glow"
-                }, null, 8, _hoisted_19)) : createCommentVNode("", true)
+                }, null, 8, _hoisted_20)) : createCommentVNode("", true)
               ])),
-              createBaseVNode("div", _hoisted_20, "Ratio: " + toDisplayString(currentAr.value.toFixed(2)) + " (" + toDisplayString(aspectFraction.value) + ")", 1)
+              createBaseVNode("div", _hoisted_21, toDisplayString(aspectRatioLabel.value), 1)
             ]),
-            createBaseVNode("div", _hoisted_21, [
-              createBaseVNode("div", _hoisted_22, [
+            createBaseVNode("div", _hoisted_22, [
+              createBaseVNode("div", _hoisted_23, [
                 _cache[15] || (_cache[15] = createBaseVNode("span", { class: "tel-label" }, "Input Shape:", -1)),
-                createBaseVNode("span", _hoisted_23, toDisplayString(telemetry.value.inputWidth ? `${telemetry.value.inputWidth} × ${telemetry.value.inputHeight} px` : "Pending execution..."), 1)
+                createBaseVNode("span", _hoisted_24, toDisplayString(telemetry.value.inputWidth ? `${telemetry.value.inputWidth} × ${telemetry.value.inputHeight} px` : "Pending execution..."), 1)
               ]),
-              createBaseVNode("div", _hoisted_24, [
-                _cache[16] || (_cache[16] = createBaseVNode("span", { class: "tel-label" }, "Reduced Latent:", -1)),
+              createBaseVNode("div", _hoisted_25, [
+                _cache[16] || (_cache[16] = createBaseVNode("span", { class: "tel-label" }, "Backend Factor:", -1)),
+                createBaseVNode("span", _hoisted_26, toDisplayString(backendFactorLabel.value), 1)
+              ]),
+              createBaseVNode("div", _hoisted_27, [
+                _cache[17] || (_cache[17] = createBaseVNode("span", { class: "tel-label" }, "Resize Domain:", -1)),
+                createBaseVNode("span", _hoisted_28, toDisplayString(resizeModeLabel.value), 1)
+              ]),
+              createBaseVNode("div", _hoisted_29, [
+                _cache[18] || (_cache[18] = createBaseVNode("span", { class: "tel-label" }, "Reduced Latent:", -1)),
                 createBaseVNode("span", {
                   class: "tel-val",
                   style: normalizeStyle(textStyle.value)
                 }, [
                   createTextVNode(toDisplayString(coercedReducedWidth.value) + " × " + toDisplayString(coercedReducedHeight.value) + " px ", 1),
-                  createBaseVNode("span", _hoisted_25, "(" + toDisplayString(wLatent.value) + " × " + toDisplayString(hLatent.value) + " blocks)", 1)
+                  createBaseVNode("span", _hoisted_30, "(" + toDisplayString(wLatent.value) + " × " + toDisplayString(hLatent.value) + " blocks)", 1)
                 ], 4)
               ]),
-              createBaseVNode("div", _hoisted_26, [
-                _cache[17] || (_cache[17] = createBaseVNode("span", { class: "tel-label" }, "Target Outputs:", -1)),
+              createBaseVNode("div", _hoisted_31, [
+                _cache[19] || (_cache[19] = createBaseVNode("span", { class: "tel-label" }, "Target Outputs:", -1)),
                 createBaseVNode("span", {
                   class: "tel-val font-semibold",
                   style: normalizeStyle(textStyle.value)
@@ -426,7 +485,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const LatentScalingCalculator = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-3b2da4e6"]]);
+const LatentScalingCalculator = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-33681d53"]]);
 const MIN_W = 420;
 const MIN_H = 360;
 function isolateContainerEvents(container) {
@@ -531,6 +590,9 @@ app.registerExtension({
         inputWidth: uiPayload.input_width?.[0],
         inputHeight: uiPayload.input_height?.[0],
         inputChannels: uiPayload.input_channels?.[0],
+        vaeFactor: uiPayload.vae_factor?.[0],
+        factorSource: uiPayload.factor_source?.[0],
+        resizeMode: uiPayload.resize_mode?.[0],
         warnings: uiPayload.warnings || [],
         executedModelFamily: uiPayload.model_family?.[0]
       });
@@ -542,36 +604,31 @@ app.registerExtension({
       }
     };
     api.addEventListener("executed", onExecuted);
-    const originalOnExecuted = node.onExecuted;
-    node.onExecuted = function onNodeExecuted(message) {
-      originalOnExecuted?.apply(this, arguments);
-      applyExecutionPayload(message);
-    };
     const originalConfigure = node.configure;
     node.configure = function configureNode(info) {
       const result = originalConfigure?.call(this, info);
       hydrateFromWidgets();
       return result;
     };
+    const originalSizeWidgetCallback = sizeWidget?.callback;
+    const originalTargetWidgetCallback = targetWidget?.callback;
+    const originalFamilyWidgetCallback = familyWidget?.callback;
     if (sizeWidget) {
-      const origCallback = sizeWidget.callback;
       sizeWidget.callback = function() {
         hydrateFromWidgets();
-        origCallback?.apply(this, arguments);
+        originalSizeWidgetCallback?.apply(this, arguments);
       };
     }
     if (targetWidget) {
-      const origCallback = targetWidget.callback;
       targetWidget.callback = function() {
         hydrateFromWidgets();
-        origCallback?.apply(this, arguments);
+        originalTargetWidgetCallback?.apply(this, arguments);
       };
     }
     if (familyWidget) {
-      const origCallback = familyWidget.callback;
       familyWidget.callback = function() {
         hydrateFromWidgets();
-        origCallback?.apply(this, arguments);
+        originalFamilyWidgetCallback?.apply(this, arguments);
       };
     }
     const initialWidth = Array.isArray(node.size) ? Number(node.size[0]) : MIN_W;
@@ -580,6 +637,10 @@ app.registerExtension({
     const originalRemoved = node.onRemoved;
     node.onRemoved = function onRemoved() {
       api.removeEventListener("executed", onExecuted);
+      node.configure = originalConfigure;
+      if (sizeWidget) sizeWidget.callback = originalSizeWidgetCallback;
+      if (targetWidget) targetWidget.callback = originalTargetWidgetCallback;
+      if (familyWidget) familyWidget.callback = originalFamilyWidgetCallback;
       vueApp.unmount();
       originalRemoved?.apply(this, arguments);
     };
@@ -1337,7 +1398,7 @@ app.registerExtension({
 }
 
 
-.latent-calc-card[data-v-3b2da4e6] {
+.latent-calc-card[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   background: rgba(20, 20, 22, 0.9);
@@ -1355,38 +1416,38 @@ app.registerExtension({
 }
 
 /* Accent Glowing Boundaries */
-.theme-flux1[data-v-3b2da4e6] {
+.theme-flux1[data-v-33681d53] {
   border-color: rgba(0, 240, 255, 0.3);
   box-shadow: 0 4px 20px rgba(0, 240, 255, 0.06), inset 0 1px 1px rgba(255,255,255,0.05);
 }
-.theme-flux2[data-v-3b2da4e6] {
+.theme-flux2[data-v-33681d53] {
   border-color: rgba(191, 0, 255, 0.3);
   box-shadow: 0 4px 20px rgba(191, 0, 255, 0.06), inset 0 1px 1px rgba(255,255,255,0.05);
 }
-.theme-sd3[data-v-3b2da4e6] {
+.theme-sd3[data-v-33681d53] {
   border-color: rgba(16, 185, 129, 0.3);
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.06), inset 0 1px 1px rgba(255,255,255,0.05);
 }
-.card-header[data-v-3b2da4e6] {
+.card-header[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   gap: 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 8px;
 }
-.header-main[data-v-3b2da4e6] {
+.header-main[data-v-33681d53] {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.header-title[data-v-3b2da4e6] {
+.header-title[data-v-33681d53] {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #f8fafc;
 }
-.header-badge[data-v-3b2da4e6] {
+.header-badge[data-v-33681d53] {
   font-size: 9px;
   font-weight: 700;
   padding: 2px 6px;
@@ -1395,45 +1456,45 @@ app.registerExtension({
   transition: all 0.3s ease;
   background: rgba(255, 255, 255, 0.02);
 }
-.header-subtitle[data-v-3b2da4e6] {
+.header-subtitle[data-v-33681d53] {
   margin: 0;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
 }
-.card-body[data-v-3b2da4e6] {
+.card-body[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.control-group[data-v-3b2da4e6] {
+.control-group[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.control-header[data-v-3b2da4e6] {
+.control-header[data-v-33681d53] {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.control-label[data-v-3b2da4e6] {
+.control-label[data-v-33681d53] {
   font-size: 11px;
   font-weight: 600;
   color: #94a3b8;
   letter-spacing: 0.01em;
 }
-.value-badge[data-v-3b2da4e6] {
+.value-badge[data-v-33681d53] {
   font-size: 11px;
   font-family: monospace;
   font-weight: 600;
 }
-.slider-wrapper[data-v-3b2da4e6] {
+.slider-wrapper[data-v-33681d53] {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 /* Styled HTML slider range */
-.styled-range[data-v-3b2da4e6] {
+.styled-range[data-v-33681d53] {
   -webkit-appearance: none;
   appearance: none;
   flex: 1;
@@ -1442,7 +1503,7 @@ app.registerExtension({
   border-radius: 2px;
   outline: none;
 }
-.styled-range[data-v-3b2da4e6]::-webkit-slider-thumb {
+.styled-range[data-v-33681d53]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 12px;
@@ -1453,16 +1514,16 @@ app.registerExtension({
   cursor: pointer;
   transition: transform 0.1s ease;
 }
-.styled-range[data-v-3b2da4e6]::-webkit-slider-thumb:hover {
+.styled-range[data-v-33681d53]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
 }
-.theme-flux1 .styled-range[data-v-3b2da4e6]::-webkit-slider-thumb { background: #00f0ff; box-shadow: 0 0 6px rgba(0,240,255,0.8);
+.theme-flux1 .styled-range[data-v-33681d53]::-webkit-slider-thumb { background: #00f0ff; box-shadow: 0 0 6px rgba(0,240,255,0.8);
 }
-.theme-flux2 .styled-range[data-v-3b2da4e6]::-webkit-slider-thumb { background: #bf00ff; box-shadow: 0 0 6px rgba(191,0,255,0.8);
+.theme-flux2 .styled-range[data-v-33681d53]::-webkit-slider-thumb { background: #bf00ff; box-shadow: 0 0 6px rgba(191,0,255,0.8);
 }
-.theme-sd3 .styled-range[data-v-3b2da4e6]::-webkit-slider-thumb { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.8);
+.theme-sd3 .styled-range[data-v-33681d53]::-webkit-slider-thumb { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.8);
 }
-.styled-number[data-v-3b2da4e6] {
+.styled-number[data-v-33681d53] {
   width: 60px;
   background: rgba(10, 10, 12, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1474,7 +1535,7 @@ app.registerExtension({
   text-align: center;
   outline: none;
 }
-.styled-select[data-v-3b2da4e6] {
+.styled-select[data-v-33681d53] {
   background: rgba(10, 10, 12, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
@@ -1486,50 +1547,50 @@ app.registerExtension({
 }
 
 /* Warnings and Badges */
-.coercion-pill[data-v-3b2da4e6] {
+.coercion-pill[data-v-33681d53] {
   font-size: 9px;
   font-weight: 500;
   padding: 2px 6px;
   border-radius: 4px;
   width: max-content;
 }
-.coercion-pill.warning[data-v-3b2da4e6] {
+.coercion-pill.warning[data-v-33681d53] {
   background: rgba(245, 158, 11, 0.1);
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
-.coercion-pill.info[data-v-3b2da4e6] {
+.coercion-pill.info[data-v-33681d53] {
   background: rgba(59, 130, 246, 0.1);
   color: #60a5fa;
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
-.alert-box[data-v-3b2da4e6] {
+.alert-box[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   padding: 6px 10px;
   border-radius: 8px;
   gap: 2px;
 }
-.alert-box.error[data-v-3b2da4e6] {
+.alert-box.error[data-v-33681d53] {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
-.alert-box.warning-box[data-v-3b2da4e6] {
+.alert-box.warning-box[data-v-33681d53] {
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
-.alert-title[data-v-3b2da4e6] {
+.alert-title[data-v-33681d53] {
   font-size: 11px;
   font-weight: 600;
 }
-.alert-desc[data-v-3b2da4e6] {
+.alert-desc[data-v-33681d53] {
   margin: 0;
   font-size: 10px;
   color: rgba(255,255,255,0.7);
 }
 
 /* Visualizer Layout */
-.preview-container[data-v-3b2da4e6] {
+.preview-container[data-v-33681d53] {
   display: grid;
   grid-template-columns: 100px 1fr;
   gap: 12px;
@@ -1537,64 +1598,64 @@ app.registerExtension({
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 10px;
 }
-.visualizer-wrapper[data-v-3b2da4e6] {
+.visualizer-wrapper[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
 }
-.svg-canvas[data-v-3b2da4e6] {
+.svg-canvas[data-v-33681d53] {
   width: 100px;
   height: 100px;
   background: #0d0d0e;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
-.aspect-ratio-label[data-v-3b2da4e6] {
+.aspect-ratio-label[data-v-33681d53] {
   font-size: 9px;
   color: rgba(255, 255, 255, 0.4);
   font-family: monospace;
 }
-.telemetry-info[data-v-3b2da4e6] {
+.telemetry-info[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 8px;
 }
-.telemetry-row[data-v-3b2da4e6] {
+.telemetry-row[data-v-33681d53] {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.tel-label[data-v-3b2da4e6] {
+.tel-label[data-v-33681d53] {
   font-size: 10px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.4);
 }
-.tel-val[data-v-3b2da4e6] {
+.tel-val[data-v-33681d53] {
   font-size: 11px;
   font-family: monospace;
 }
-.tel-val.highlight[data-v-3b2da4e6] {
+.tel-val.highlight[data-v-33681d53] {
   color: #fff;
 }
-.latent-block-size[data-v-3b2da4e6] {
+.latent-block-size[data-v-33681d53] {
   font-size: 9px;
   color: rgba(255, 255, 255, 0.45);
   margin-left: 4px;
 }
 
 /* Micro-animations */
-.pulse-glow[data-v-3b2da4e6] {
+.pulse-glow[data-v-33681d53] {
   transition: all 0.3s ease;
 }
-.theme-flux1 .pulse-glow[data-v-3b2da4e6] {
+.theme-flux1 .pulse-glow[data-v-33681d53] {
   filter: drop-shadow(0 0 2px rgba(0, 240, 255, 0.4));
 }
-.theme-flux2 .pulse-glow[data-v-3b2da4e6] {
+.theme-flux2 .pulse-glow[data-v-33681d53] {
   filter: drop-shadow(0 0 2px rgba(191, 0, 255, 0.4));
 }
-.theme-sd3 .pulse-glow[data-v-3b2da4e6] {
+.theme-sd3 .pulse-glow[data-v-33681d53] {
   filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4));
 }`));
       document.head.appendChild(elementStyle);

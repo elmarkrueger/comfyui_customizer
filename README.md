@@ -16,7 +16,8 @@ This repository contains a standalone custom node pack for ComfyUI Nodes 2.0.
   - Emits compare preview thumbnails and histogram UI telemetry
 - Duffy_LatentScalingCalculator
   - Dynamic latent resizer with aspect-ratio-locked scaling for LATENT tensors
-  - Supports model-family factor selection (Flux 1, Flux 2, SD3)
+  - Uses connected VAE ratio metadata as the authoritative spatial factor source
+  - Keeps model-family selection (Flux 1, Flux 2, SD3) for compatibility checks/warnings
   - Emits calculated target dimensions and validation warnings as UI telemetry
   - Includes a Vue-based interactive panel with live dimension previews
 
@@ -32,15 +33,15 @@ Node ID: Duffy_LatentScalingCalculator
 Feature overview:
 
 - Aspect-ratio-preserving latent scaling based on source latent dimensions
-- Architecture-aware spatial factor mapping (Flux 1 and SD3 use f=8, Flux 2 uses f=6)
-- Floor alignment for reduced size and ceiling alignment for target size to keep VAE divisibility
+- Connected VAE ratio metadata defines scaling factor; model-family selection is used for diagnostics
+- Round-to-nearest alignment for reduced and target sizes to keep VAE divisibility
 - Built-in dimensional collapse protection for extreme aspect ratios or undersized inputs
 - Channel-depth compatibility warnings surfaced to the frontend panel
 
 Quick usage:
 
 1. Connect a LATENT source to Duffy_LatentScalingCalculator.samples.
-2. Select model_family to match the downstream diffusion architecture.
+2. Select model_family to match the downstream diffusion architecture for compatibility checks.
 3. Set reduced_image_size for scaled latent generation and target_size for final dimension guidance.
 4. Queue prompt, then read calc_width and calc_height outputs or view telemetry in the node panel.
 

@@ -134,6 +134,9 @@ comfyApp.registerExtension({
         inputWidth: uiPayload.input_width?.[0],
         inputHeight: uiPayload.input_height?.[0],
         inputChannels: uiPayload.input_channels?.[0],
+        vaeFactor: uiPayload.vae_factor?.[0],
+        factorSource: uiPayload.factor_source?.[0],
+        resizeMode: uiPayload.resize_mode?.[0],
         warnings: uiPayload.warnings || [],
         executedModelFamily: uiPayload.model_family?.[0]
       });
@@ -148,12 +151,6 @@ comfyApp.registerExtension({
 
     comfyApi.addEventListener("executed", onExecuted);
 
-    const originalOnExecuted = node.onExecuted;
-    node.onExecuted = function onNodeExecuted(message: any) {
-      originalOnExecuted?.apply(this, arguments);
-      applyExecutionPayload(message);
-    };
-
     // Node loading configuration hook
     const originalConfigure = node.configure;
     node.configure = function configureNode(info: any) {
@@ -163,25 +160,26 @@ comfyApp.registerExtension({
     };
 
     // Callbacks on standard widget updates
+    const originalSizeWidgetCallback = sizeWidget?.callback;
+    const originalTargetWidgetCallback = targetWidget?.callback;
+    const originalFamilyWidgetCallback = familyWidget?.callback;
+
     if (sizeWidget) {
-      const origCallback = sizeWidget.callback;
       sizeWidget.callback = function() {
         hydrateFromWidgets();
-        origCallback?.apply(this, arguments as any);
+        originalSizeWidgetCallback?.apply(this, arguments as any);
       };
     }
     if (targetWidget) {
-      const origCallback = targetWidget.callback;
       targetWidget.callback = function() {
         hydrateFromWidgets();
-        origCallback?.apply(this, arguments as any);
+        originalTargetWidgetCallback?.apply(this, arguments as any);
       };
     }
     if (familyWidget) {
-      const origCallback = familyWidget.callback;
       familyWidget.callback = function() {
         hydrateFromWidgets();
-        origCallback?.apply(this, arguments as any);
+        originalFamilyWidgetCallback?.apply(this, arguments as any);
       };
     }
 
@@ -194,6 +192,10 @@ comfyApp.registerExtension({
     const originalRemoved = node.onRemoved;
     node.onRemoved = function onRemoved() {
       comfyApi.removeEventListener("executed", onExecuted);
+      node.configure = originalConfigure;
+      if (sizeWidget) sizeWidget.callback = originalSizeWidgetCallback;
+      if (targetWidget) targetWidget.callback = originalTargetWidgetCallback;
+      if (familyWidget) familyWidget.callback = originalFamilyWidgetCallback;
       vueApp.unmount();
       originalRemoved?.apply(this, arguments);
     };
