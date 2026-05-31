@@ -182,7 +182,7 @@
       </div>
 
       <!-- Section 3: Color Balancing & Gradient Map -->
-      <div class="panel-section" :class="{ 'is-collapsed': collapsedSections.colorMap }">
+      <div class="panel-section color-map-panel" :class="{ 'is-collapsed': collapsedSections.colorMap }">
         <div class="section-header" @click="toggleSection('colorMap')">
           <span class="section-title">Color Balancing & Gradient Map</span>
           <span class="collapse-icon">{{ collapsedSections.colorMap ? '▼' : '▲' }}</span>
@@ -1909,8 +1909,16 @@ export default defineComponent({
   overflow: hidden;
 }
 
+.preview-panel {
+  order: 1;
+}
+
 .effects-panel {
   order: 2;
+}
+
+.color-map-panel {
+  order: 3;
 }
 
 .curves-panel {
