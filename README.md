@@ -12,7 +12,7 @@ This repository contains a standalone custom node pack for ComfyUI Nodes 2.0.
 - Duffy_RealTimeGradingProcessor
   - Real-time post-processing and color grading node for IMAGE tensors
   - Persists grading controls in hidden socketless JSON
-  - Applies RGB tonal curves, gradient map blending, and cinematic post effects
+  - Applies RGB tonal curves, gradient map blending, ECS + LGG grading, bloom, and cinematic post effects
   - Emits compare preview thumbnails and histogram UI telemetry
 - Duffy_LatentScalingCalculator
   - Dynamic latent resizer with aspect-ratio-locked scaling for LATENT tensors
@@ -59,7 +59,11 @@ Feature overview:
 - Before/After compare viewport with a draggable wipe control
 - RGB master and per-channel tonal curve editing
 - Color balancing via gradient map stops, blend mode, and opacity
+- Exposure/Contrast/Saturation controls for global tonal shaping
+- Lift/Gamma/Gain controls for creative grade balancing
+- Bloom controls (intensity, threshold, radius) with backend/high-res processing
 - Post effects including chromatic aberration, film grain, sharpen, and vignette
+- Robust gradient-stop drag behavior in the gradient editor
 
 ![Real-Time Shader & Grading Processor UI](images/real_time_shader_grading_processor.jpg)
 
@@ -78,6 +82,21 @@ Example shader_params payload (reference):
   "film_grain": 0.05,
   "sharpen": 0.35,
   "vignette_intensity": 0.45,
+  "exposure_contrast_saturation": {
+    "exposure": 0.20,
+    "contrast": 1.15,
+    "saturation": 1.10
+  },
+  "lift_gamma_gain": {
+    "lift": -0.02,
+    "gamma": 1.05,
+    "gain": 1.08
+  },
+  "bloom": {
+    "intensity": 0.35,
+    "threshold": 0.78,
+    "radius": 2.20
+  },
   "curves": {
     "rgb": [[0.0, 0.0], [0.5, 0.42], [1.0, 1.0]],
     "r": [[0.0, 0.0], [1.0, 1.0]],
