@@ -350,6 +350,147 @@
                 class="styled-range" 
               />
             </div>
+
+            <div class="effects-group-title">Exposure / Contrast / Saturation</div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Exposure (Stops)</span>
+                <span class="value-display">{{ params.exposure_contrast_saturation.exposure.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="-200"
+                max="200"
+                :value="params.exposure_contrast_saturation.exposure * 100"
+                @input="params.exposure_contrast_saturation.exposure = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Contrast</span>
+                <span class="value-display">{{ params.exposure_contrast_saturation.contrast.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="300"
+                :value="params.exposure_contrast_saturation.contrast * 100"
+                @input="params.exposure_contrast_saturation.contrast = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Saturation</span>
+                <span class="value-display">{{ params.exposure_contrast_saturation.saturation.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="300"
+                :value="params.exposure_contrast_saturation.saturation * 100"
+                @input="params.exposure_contrast_saturation.saturation = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="effects-group-title">Lift / Gamma / Gain</div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Lift</span>
+                <span class="value-display">{{ params.lift_gamma_gain.lift.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="-100"
+                max="100"
+                :value="params.lift_gamma_gain.lift * 100"
+                @input="params.lift_gamma_gain.lift = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Gamma</span>
+                <span class="value-display">{{ params.lift_gamma_gain.gamma.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="400"
+                :value="params.lift_gamma_gain.gamma * 100"
+                @input="params.lift_gamma_gain.gamma = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Gain</span>
+                <span class="value-display">{{ params.lift_gamma_gain.gain.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="300"
+                :value="params.lift_gamma_gain.gain * 100"
+                @input="params.lift_gamma_gain.gain = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="effects-group-title">Bloom</div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Intensity</span>
+                <span class="value-display">{{ params.bloom.intensity.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="200"
+                :value="params.bloom.intensity * 100"
+                @input="params.bloom.intensity = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Threshold</span>
+                <span class="value-display">{{ params.bloom.threshold.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                :value="params.bloom.threshold * 100"
+                @input="params.bloom.threshold = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
+
+            <div class="control-row-vertical">
+              <div class="slider-labels">
+                <span class="control-label">Radius</span>
+                <span class="value-display">{{ params.bloom.radius.toFixed(2) }}</span>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="800"
+                :value="params.bloom.radius * 100"
+                @input="params.bloom.radius = parseFloat(($event.target as HTMLInputElement).value) / 100; onParamChange()"
+                class="styled-range"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -358,7 +499,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, ref, computed, onMounted, onUnmounted, watch, type PropType } from "vue";
+import { defineComponent, reactive, ref, computed, onMounted, onUnmounted, type PropType } from "vue";
 
 // Define states interfaces
 interface Stop {
@@ -379,6 +520,21 @@ interface GradingPayload {
   film_grain: number;
   sharpen: number;
   vignette_intensity: number;
+  exposure_contrast_saturation: {
+    exposure: number;
+    contrast: number;
+    saturation: number;
+  };
+  lift_gamma_gain: {
+    lift: number;
+    gamma: number;
+    gain: number;
+  };
+  bloom: {
+    intensity: number;
+    threshold: number;
+    radius: number;
+  };
   gradient_map: {
     enabled: boolean;
     stops: Stop[];
@@ -398,6 +554,21 @@ const DEFAULT_PAYLOAD = (): GradingPayload => ({
   film_grain: 0.0,
   sharpen: 0.0,
   vignette_intensity: 0.0,
+  exposure_contrast_saturation: {
+    exposure: 0.0,
+    contrast: 1.0,
+    saturation: 1.0
+  },
+  lift_gamma_gain: {
+    lift: 0.0,
+    gamma: 1.0,
+    gain: 1.0
+  },
+  bloom: {
+    intensity: 0.0,
+    threshold: 0.8,
+    radius: 2.0
+  },
   gradient_map: {
     enabled: false,
     stops: [
@@ -631,6 +802,15 @@ export default defineComponent({
       uniform float u_time;
       uniform float u_sharpen_intensity;
       uniform float u_vignette_intensity;
+      uniform float u_exposure;
+      uniform float u_contrast;
+      uniform float u_saturation;
+      uniform float u_lift;
+      uniform float u_gamma;
+      uniform float u_gain;
+      uniform float u_bloom_intensity;
+      uniform float u_bloom_threshold;
+      uniform float u_bloom_radius;
 
       in vec2 v_texCoord;
       out vec4 fragColor;
@@ -645,6 +825,65 @@ export default defineComponent({
 
       vec3 blendSoftLight(vec3 base, vec3 blend) {
         return (1.0 - 2.0 * blend) * base * base + 2.0 * blend * base;
+      }
+
+      vec3 applyEcsLgg(vec3 inputColor) {
+        vec3 color = inputColor * pow(2.0, u_exposure);
+        color = (color - 0.5) * u_contrast + 0.5;
+
+        float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        color = vec3(luminance) + (color - vec3(luminance)) * u_saturation;
+
+        color = color + vec3(u_lift);
+        color = pow(max(color, vec3(1e-6)), vec3(1.0 / max(u_gamma, 1e-3)));
+        color = color * vec3(u_gain);
+        return clamp(color, 0.0, 1.0);
+      }
+
+      vec3 applyCurves(vec3 color) {
+        float rGraded = texture(u_curvesLut, vec2(color.r, 0.5)).r;
+        float gGraded = texture(u_curvesLut, vec2(color.g, 0.5)).g;
+        float bGraded = texture(u_curvesLut, vec2(color.b, 0.5)).b;
+
+        rGraded = texture(u_curvesLut, vec2(rGraded, 0.5)).a;
+        gGraded = texture(u_curvesLut, vec2(gGraded, 0.5)).a;
+        bGraded = texture(u_curvesLut, vec2(bGraded, 0.5)).a;
+
+        return clamp(vec3(rGraded, gGraded, bGraded), 0.0, 1.0);
+      }
+
+      vec3 applyGradientMap(vec3 color) {
+        if (u_gradientEnabled != 1) {
+          return color;
+        }
+
+        float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        vec3 gradColor = texture(u_gradientMap, vec2(luminance, 0.5)).rgb;
+
+        vec3 blended;
+        if (u_gradientBlendingMode == 0) {
+          blended = gradColor;
+        } else if (u_gradientBlendingMode == 1) {
+          blended = blendOverlay(color, gradColor);
+        } else if (u_gradientBlendingMode == 2) {
+          blended = blendSoftLight(color, gradColor);
+        } else if (u_gradientBlendingMode == 3) {
+          blended = color * gradColor;
+        } else if (u_gradientBlendingMode == 4) {
+          blended = 1.0 - (1.0 - color) * (1.0 - gradColor);
+        } else {
+          blended = gradColor;
+        }
+
+        return mix(color, blended, u_gradientOpacity);
+      }
+
+      vec3 processSampleColor(vec2 sampleUv) {
+        vec3 sampled = texture(u_image, sampleUv).rgb;
+        sampled = applyEcsLgg(sampled);
+        sampled = applyCurves(sampled);
+        sampled = applyGradientMap(sampled);
+        return sampled;
       }
 
       void main() {
@@ -673,48 +912,72 @@ export default defineComponent({
           color.g = centerColor.g;
           color.b = texture(u_image, uv - offset).b;
         }
+
+        color = applyEcsLgg(color);
         
         // 3. Tonal Curves
-        float rGraded = texture(u_curvesLut, vec2(color.r, 0.5)).r;
-        float gGraded = texture(u_curvesLut, vec2(color.g, 0.5)).g;
-        float bGraded = texture(u_curvesLut, vec2(color.b, 0.5)).b;
-        
-        rGraded = texture(u_curvesLut, vec2(rGraded, 0.5)).a;
-        gGraded = texture(u_curvesLut, vec2(gGraded, 0.5)).a;
-        bGraded = texture(u_curvesLut, vec2(bGraded, 0.5)).a;
-        
-        color = clamp(vec3(rGraded, gGraded, bGraded), 0.0, 1.0);
+        color = applyCurves(color);
         
         // 4. Gradient Map
-        if (u_gradientEnabled == 1) {
-          float luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
-          vec3 gradColor = texture(u_gradientMap, vec2(luminance, 0.5)).rgb;
-          
-          vec3 blended;
-          if (u_gradientBlendingMode == 0) {
-            blended = gradColor;
-          } else if (u_gradientBlendingMode == 1) {
-            blended = blendOverlay(color, gradColor);
-          } else if (u_gradientBlendingMode == 2) {
-            blended = blendSoftLight(color, gradColor);
-          } else if (u_gradientBlendingMode == 3) {
-            blended = color * gradColor;
-          } else if (u_gradientBlendingMode == 4) {
-            blended = 1.0 - (1.0 - color) * (1.0 - gradColor);
-          } else {
-            blended = gradColor;
+        color = applyGradientMap(color);
+
+        // 5. Bloom
+        if (u_bloom_intensity > 0.0 && u_bloom_radius > 0.0) {
+          vec2 texelSize = 1.0 / vec2(textureSize(u_image, 0));
+          vec2 bloomStep = texelSize * u_bloom_radius;
+          float bloomMaskDenom = max(1e-6, 1.0 - u_bloom_threshold);
+
+          vec3 bloomAccum = vec3(0.0);
+          float weightAccum = 0.0;
+
+          float centerWeight = 0.227027;
+          float centerLum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+          float centerMask = clamp((centerLum - u_bloom_threshold) / bloomMaskDenom, 0.0, 1.0);
+          bloomAccum += color * centerMask * centerWeight;
+          weightAccum += centerWeight;
+
+          float nearWeight = 0.316216;
+          vec2 nearOffsets[4];
+          nearOffsets[0] = vec2(1.3846, 0.0);
+          nearOffsets[1] = vec2(-1.3846, 0.0);
+          nearOffsets[2] = vec2(0.0, 1.3846);
+          nearOffsets[3] = vec2(0.0, -1.3846);
+
+          for (int i = 0; i < 4; i++) {
+            vec3 sampleColor = processSampleColor(uv + nearOffsets[i] * bloomStep);
+            float sampleLum = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
+            float sampleMask = clamp((sampleLum - u_bloom_threshold) / bloomMaskDenom, 0.0, 1.0);
+            bloomAccum += sampleColor * sampleMask * nearWeight;
+            weightAccum += nearWeight;
           }
-          color = mix(color, blended, u_gradientOpacity);
+
+          float farWeight = 0.070270;
+          vec2 farOffsets[4];
+          farOffsets[0] = vec2(3.2308, 3.2308);
+          farOffsets[1] = vec2(-3.2308, 3.2308);
+          farOffsets[2] = vec2(3.2308, -3.2308);
+          farOffsets[3] = vec2(-3.2308, -3.2308);
+
+          for (int i = 0; i < 4; i++) {
+            vec3 sampleColor = processSampleColor(uv + farOffsets[i] * bloomStep);
+            float sampleLum = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
+            float sampleMask = clamp((sampleLum - u_bloom_threshold) / bloomMaskDenom, 0.0, 1.0);
+            bloomAccum += sampleColor * sampleMask * farWeight;
+            weightAccum += farWeight;
+          }
+
+          vec3 bloom = bloomAccum / max(weightAccum, 1e-6);
+          color = clamp(color + bloom * u_bloom_intensity, 0.0, 1.0);
         }
         
-        // 5. Vignette Falloff
+        // 6. Vignette Falloff
         if (u_vignette_intensity > 0.0) {
           float rawDist = length(uv - vec2(0.5)) * 2.0;
           float vignette = clamp(1.0 - (rawDist * rawDist * u_vignette_intensity), 0.0, 1.0);
           color *= vignette;
         }
         
-        // 6. Film Grain
+        // 7. Film Grain
         if (u_grain_intensity > 0.0) {
           float noise = fract(sin(dot(uv.xy + u_time, vec2(12.9898, 78.233))) * 43758.5453);
           float grainAmount = (noise - 0.5) * u_grain_intensity;
@@ -916,6 +1179,15 @@ export default defineComponent({
       gl.uniform1f(gl.getUniformLocation(program, "u_time"), performance.now() / 1000);
       gl.uniform1f(gl.getUniformLocation(program, "u_sharpen_intensity"), params.sharpen);
       gl.uniform1f(gl.getUniformLocation(program, "u_vignette_intensity"), params.vignette_intensity);
+      gl.uniform1f(gl.getUniformLocation(program, "u_exposure"), params.exposure_contrast_saturation.exposure);
+      gl.uniform1f(gl.getUniformLocation(program, "u_contrast"), params.exposure_contrast_saturation.contrast);
+      gl.uniform1f(gl.getUniformLocation(program, "u_saturation"), params.exposure_contrast_saturation.saturation);
+      gl.uniform1f(gl.getUniformLocation(program, "u_lift"), params.lift_gamma_gain.lift);
+      gl.uniform1f(gl.getUniformLocation(program, "u_gamma"), params.lift_gamma_gain.gamma);
+      gl.uniform1f(gl.getUniformLocation(program, "u_gain"), params.lift_gamma_gain.gain);
+      gl.uniform1f(gl.getUniformLocation(program, "u_bloom_intensity"), params.bloom.intensity);
+      gl.uniform1f(gl.getUniformLocation(program, "u_bloom_threshold"), params.bloom.threshold);
+      gl.uniform1f(gl.getUniformLocation(program, "u_bloom_radius"), params.bloom.radius);
 
       // Render
       gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -997,6 +1269,30 @@ export default defineComponent({
         params.sharpen = typeof data.sharpen === "number" ? data.sharpen : 0.0;
         params.vignette_intensity = typeof data.vignette_intensity === "number" ? data.vignette_intensity : 0.0;
 
+        if (data.exposure_contrast_saturation) {
+          params.exposure_contrast_saturation.exposure = typeof data.exposure_contrast_saturation.exposure === "number"
+            ? data.exposure_contrast_saturation.exposure
+            : 0.0;
+          params.exposure_contrast_saturation.contrast = typeof data.exposure_contrast_saturation.contrast === "number"
+            ? data.exposure_contrast_saturation.contrast
+            : 1.0;
+          params.exposure_contrast_saturation.saturation = typeof data.exposure_contrast_saturation.saturation === "number"
+            ? data.exposure_contrast_saturation.saturation
+            : 1.0;
+        }
+
+        if (data.lift_gamma_gain) {
+          params.lift_gamma_gain.lift = typeof data.lift_gamma_gain.lift === "number" ? data.lift_gamma_gain.lift : 0.0;
+          params.lift_gamma_gain.gamma = typeof data.lift_gamma_gain.gamma === "number" ? data.lift_gamma_gain.gamma : 1.0;
+          params.lift_gamma_gain.gain = typeof data.lift_gamma_gain.gain === "number" ? data.lift_gamma_gain.gain : 1.0;
+        }
+
+        if (data.bloom) {
+          params.bloom.intensity = typeof data.bloom.intensity === "number" ? data.bloom.intensity : 0.0;
+          params.bloom.threshold = typeof data.bloom.threshold === "number" ? data.bloom.threshold : 0.8;
+          params.bloom.radius = typeof data.bloom.radius === "number" ? data.bloom.radius : 2.0;
+        }
+
         if (data.gradient_map) {
           params.gradient_map.enabled = !!data.gradient_map.enabled;
           params.gradient_map.stops = data.gradient_map.stops || [
@@ -1024,11 +1320,19 @@ export default defineComponent({
     // Schedule canvas render pass
     let animFrameId = 0;
     let cleanupWipeDragListeners: (() => void) | null = null;
+    let cleanupStopDragListeners: (() => void) | null = null;
 
     function clearWipeDragListeners() {
       if (cleanupWipeDragListeners) {
         cleanupWipeDragListeners();
         cleanupWipeDragListeners = null;
+      }
+    }
+
+    function clearStopDragListeners() {
+      if (cleanupStopDragListeners) {
+        cleanupStopDragListeners();
+        cleanupStopDragListeners = null;
       }
     }
 
@@ -1313,33 +1617,62 @@ export default defineComponent({
     }
 
     function startStopDrag(idx: number, e: MouseEvent) {
+      if (e.button !== 0) {
+        return;
+      }
+
+      e.preventDefault();
       e.stopPropagation();
+
+      clearStopDragListeners();
       activeStopIndex.value = idx;
 
+      const onGlobalUp = () => {
+        params.gradient_map.stops.sort((a, b) => a.offset - b.offset);
+        if (activeStopIndex.value !== null && params.gradient_map.stops.length > 0) {
+          // Relocate active index after sort.
+          const safeIndex = Math.max(0, Math.min(activeStopIndex.value, params.gradient_map.stops.length - 1));
+          const currentOffset = params.gradient_map.stops[safeIndex]?.offset;
+          if (typeof currentOffset === "number") {
+            activeStopIndex.value = params.gradient_map.stops.findIndex(s => s.offset === currentOffset);
+          }
+        }
+        clearStopDragListeners();
+      };
+
       const onGlobalMove = (moveEvent: MouseEvent) => {
+        if ((moveEvent.buttons & 1) !== 1) {
+          onGlobalUp();
+          return;
+        }
+
         const bar = gradientBar.value;
         if (!bar || activeStopIndex.value === null) return;
+
+        moveEvent.preventDefault();
+
         const rect = bar.getBoundingClientRect();
         const offset = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
-        
-        // Lock edge stops slightly or let them float
+
+        // Lock edge stops slightly or let them float.
         params.gradient_map.stops[activeStopIndex.value].offset = offset;
         onParamChange();
       };
 
-      const onGlobalUp = () => {
-        params.gradient_map.stops.sort((a, b) => a.offset - b.offset);
-        if (activeStopIndex.value !== null) {
-          // Relocate active index after sort
-          const currentOffset = params.gradient_map.stops[activeStopIndex.value].offset;
-          activeStopIndex.value = params.gradient_map.stops.findIndex(s => s.offset === currentOffset);
-        }
-        window.removeEventListener("mousemove", onGlobalMove);
-        window.removeEventListener("mouseup", onGlobalUp);
+      const onWindowBlur = () => {
+        onGlobalUp();
       };
 
       window.addEventListener("mousemove", onGlobalMove);
       window.addEventListener("mouseup", onGlobalUp);
+
+      window.addEventListener("blur", onWindowBlur);
+
+      cleanupStopDragListeners = () => {
+        window.removeEventListener("mousemove", onGlobalMove);
+        window.removeEventListener("mouseup", onGlobalUp);
+        window.removeEventListener("blur", onWindowBlur);
+      };
     }
 
     function removeStop(idx: number) {
@@ -1381,6 +1714,18 @@ export default defineComponent({
       params.film_grain = defaults.film_grain;
       params.sharpen = defaults.sharpen;
       params.vignette_intensity = defaults.vignette_intensity;
+
+      params.exposure_contrast_saturation.exposure = defaults.exposure_contrast_saturation.exposure;
+      params.exposure_contrast_saturation.contrast = defaults.exposure_contrast_saturation.contrast;
+      params.exposure_contrast_saturation.saturation = defaults.exposure_contrast_saturation.saturation;
+
+      params.lift_gamma_gain.lift = defaults.lift_gamma_gain.lift;
+      params.lift_gamma_gain.gamma = defaults.lift_gamma_gain.gamma;
+      params.lift_gamma_gain.gain = defaults.lift_gamma_gain.gain;
+
+      params.bloom.intensity = defaults.bloom.intensity;
+      params.bloom.threshold = defaults.bloom.threshold;
+      params.bloom.radius = defaults.bloom.radius;
 
       params.gradient_map.enabled = defaults.gradient_map.enabled;
       params.gradient_map.blending_mode = defaults.gradient_map.blending_mode;
@@ -1430,6 +1775,7 @@ export default defineComponent({
       if (animFrameId) cancelAnimationFrame(animFrameId);
       isWiping.value = false;
       clearWipeDragListeners();
+      clearStopDragListeners();
     });
 
     return {
@@ -2101,5 +2447,15 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.effects-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
 }
 </style>

@@ -7,6 +7,7 @@ from typing import Any
 import folder_paths
 import numpy as np
 import torch
+import torch.nn.functional as F
 from comfy_api.latest import io
 from PIL import Image
 
@@ -127,6 +128,43 @@ def generate_gradient_lut(stops: list[dict], device, dtype) -> torch.Tensor:
     return torch.tensor(lut, device=device, dtype=dtype)
 
 
+def clamp_float(value: Any, minimum: float, maximum: float, fallback: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(minimum, min(maximum, parsed))
+
+
+def make_gaussian_kernel_1d(sigma: float, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+    sigma = max(float(sigma), 1e-3)
+    radius = max(1, int(np.ceil(sigma * 3.0)))
+    coords = torch.arange(-radius, radius + 1, device=device, dtype=dtype)
+    kernel = torch.exp(-(coords * coords) / (2.0 * sigma * sigma))
+    kernel = kernel / torch.sum(kernel)
+    return kernel
+
+
+def apply_separable_gaussian_blur(image: torch.Tensor, sigma: float) -> torch.Tensor:
+    if sigma <= 0.0:
+        return image
+
+    _, channels, _, _ = image.shape
+    device = image.device
+    dtype = image.dtype
+
+    kernel_1d = make_gaussian_kernel_1d(sigma, device=device, dtype=dtype)
+    kernel_x = kernel_1d.view(1, 1, 1, -1).repeat(channels, 1, 1, 1)
+    kernel_y = kernel_1d.view(1, 1, -1, 1).repeat(channels, 1, 1, 1)
+
+    pad_x = kernel_x.shape[-1] // 2
+    pad_y = kernel_y.shape[-2] // 2
+
+    blurred = F.conv2d(F.pad(image, (pad_x, pad_x, 0, 0), mode="replicate"), kernel_x, groups=channels)
+    blurred = F.conv2d(F.pad(blurred, (0, 0, pad_y, pad_y), mode="replicate"), kernel_y, groups=channels)
+    return blurred
+
+
 class DuffyRealTimeGradingProcessor(io.ComfyNode):
     @classmethod
     def define_schema(cls) -> io.Schema:
@@ -137,7 +175,8 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
             not_idempotent=True,
             description=(
                 "Real-time post-processing and color grading suite using Nodes 2.0 and V3 Schema. "
-                "Applies curves, chromatic aberration, grain, sharpening, vignette, and gradient maps."
+                "Applies curves, chromatic aberration, grain, sharpening, vignette, gradient maps, "
+                "lift/gamma/gain, exposure/contrast/saturation, and bloom."
             ),
             inputs=[
                 io.Image.Input("image"),
@@ -265,10 +304,25 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
 
         # Extract parameters
         curves = params.get("curves", {})
-        chromatic_aberration = float(params.get("chromatic_aberration", 0.0))
-        film_grain = float(params.get("film_grain", 0.0))
-        sharpen = float(params.get("sharpen", 0.0))
-        vignette_intensity = float(params.get("vignette_intensity", 0.0))
+        chromatic_aberration = clamp_float(params.get("chromatic_aberration", 0.0), 0.0, 0.05, 0.0)
+        film_grain = clamp_float(params.get("film_grain", 0.0), 0.0, 0.1, 0.0)
+        sharpen = clamp_float(params.get("sharpen", 0.0), 0.0, 2.0, 0.0)
+        vignette_intensity = clamp_float(params.get("vignette_intensity", 0.0), 0.0, 1.5, 0.0)
+
+        ecs_params = params.get("exposure_contrast_saturation", {})
+        exposure = clamp_float(ecs_params.get("exposure", 0.0), -2.0, 2.0, 0.0)
+        contrast = clamp_float(ecs_params.get("contrast", 1.0), 0.0, 3.0, 1.0)
+        saturation = clamp_float(ecs_params.get("saturation", 1.0), 0.0, 3.0, 1.0)
+
+        lgg_params = params.get("lift_gamma_gain", {})
+        lift = clamp_float(lgg_params.get("lift", 0.0), -1.0, 1.0, 0.0)
+        gamma = clamp_float(lgg_params.get("gamma", 1.0), 0.1, 4.0, 1.0)
+        gain = clamp_float(lgg_params.get("gain", 1.0), 0.0, 3.0, 1.0)
+
+        bloom_params = params.get("bloom", {})
+        bloom_intensity = clamp_float(bloom_params.get("intensity", 0.0), 0.0, 2.0, 0.0)
+        bloom_threshold = clamp_float(bloom_params.get("threshold", 0.8), 0.0, 1.0, 0.8)
+        bloom_radius = clamp_float(bloom_params.get("radius", 2.0), 0.5, 8.0, 2.0)
         
         grad_map_params = params.get("gradient_map", {})
         grad_enabled = bool(grad_map_params.get("enabled", False))
@@ -316,8 +370,33 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
             b_chan = torch.nn.functional.grid_sample(x[:, 2:3, :, :], grid_blue, mode="bilinear", padding_mode="border", align_corners=True)
             
             x = torch.cat([r_chan, g_chan, b_chan], dim=1)
+
+        # 3. Exposure / Contrast / Saturation
+        if exposure != 0.0:
+            x = x * (2.0 ** exposure)
+
+        if contrast != 1.0:
+            x = (x - 0.5) * contrast + 0.5
+
+        if saturation != 1.0:
+            lum = 0.2126 * x[:, 0:1, :, :] + 0.7152 * x[:, 1:2, :, :] + 0.0722 * x[:, 2:3, :, :]
+            x = lum + (x - lum) * saturation
+
+        x = torch.clamp(x, 0.0, 1.0)
+
+        # 4. Lift / Gamma / Gain
+        if lift != 0.0:
+            x = x + lift
+
+        if gamma != 1.0:
+            x = torch.pow(torch.clamp(x, 1e-6, 1.0), 1.0 / gamma)
+
+        if gain != 1.0:
+            x = x * gain
+
+        x = torch.clamp(x, 0.0, 1.0)
             
-        # 3. Tonal Curves
+        # 5. Tonal Curves
         # Compute Monotone Cubic LUTs for each channel
         lut_rgb = torch.tensor(interpolate_monotone_cubic(curves.get("rgb")), device=device, dtype=dtype)
         lut_r = torch.tensor(interpolate_monotone_cubic(curves.get("r")), device=device, dtype=dtype)
@@ -340,7 +419,7 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
         
         x = torch.stack([lut_rgb[idx_mr], lut_rgb[idx_mg], lut_rgb[idx_mb]], dim=1)
         
-        # 4. Gradient Map Color Balancing
+        # 6. Gradient Map Color Balancing
         if grad_enabled:
             # Compute luminance
             luminance = 0.2126 * x[:, 0:1, :, :] + 0.7152 * x[:, 1:2, :, :] + 0.0722 * x[:, 2:3, :, :]
@@ -366,8 +445,25 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
                 blended = grad_mapped
                 
             x = torch.clamp((1.0 - grad_opacity) * x + grad_opacity * blended, 0.0, 1.0)
+
+            # 7. Bloom (highlight threshold + downsampled Gaussian blur)
+            if bloom_intensity > 0.0:
+                bloom_threshold_scale = max(1e-6, 1.0 - bloom_threshold)
+                bloom_luminance = 0.2126 * x[:, 0:1, :, :] + 0.7152 * x[:, 1:2, :, :] + 0.0722 * x[:, 2:3, :, :]
+                bloom_mask = torch.clamp((bloom_luminance - bloom_threshold) / bloom_threshold_scale, 0.0, 1.0)
+                bloom_source = x * bloom_mask
+
+                down_h = max(1, H // 2)
+                down_w = max(1, W // 2)
+                bloom_small = F.interpolate(bloom_source, size=(down_h, down_w), mode="bilinear", align_corners=False)
+
+                # Sigma is scaled for lower-resolution blur to keep bloom spread predictable.
+                bloom_blurred = apply_separable_gaussian_blur(bloom_small, sigma=max(0.5, bloom_radius * 0.5))
+                bloom_full = F.interpolate(bloom_blurred, size=(H, W), mode="bilinear", align_corners=False)
+
+                x = torch.clamp(x + bloom_full * bloom_intensity, 0.0, 1.0)
             
-        # 5. Vignette Falloff
+            # 8. Vignette Falloff
         if vignette_intensity > 0.0:
             dist_v = torch.norm(grid, dim=-1, keepdim=True).permute(2, 0, 1).unsqueeze(0)  # [1, 1, H, W]
             # Match coordinate scope: distance to corner in [-1, 1] grid is sqrt(2) = 1.414.
@@ -375,7 +471,7 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
             vignette = torch.clamp(1.0 - (dist_v * dist_v * vignette_intensity), 0.0, 1.0)
             x = x * vignette
             
-        # 6. Cinematic Film Grain
+        # 9. Cinematic Film Grain
         if film_grain > 0.0:
             # Monochromatic grain added to luminance
             noise = torch.randn(B, 1, H, W, device=device, dtype=dtype)
@@ -388,7 +484,7 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
         # Save a low-resolution thumbnail of processed output for robust compare fallback.
         processed_thumbnail_info = _save_thumbnail_from_tensor(output_tensor[0], "duffy_grading_output")
         
-        # 7. Asynchronous Histogram Telemetry (calculated on output_tensor)
+        # 10. Asynchronous Histogram Telemetry (calculated on output_tensor)
         # Flatten channels for histc
         out_r = output_tensor[:, :, :, 0].flatten()
         out_g = output_tensor[:, :, :, 1].flatten()

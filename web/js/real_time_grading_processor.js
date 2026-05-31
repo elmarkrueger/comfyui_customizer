@@ -12,6 +12,21 @@ const DEFAULT_PAYLOAD = () => ({
   film_grain: 0,
   sharpen: 0,
   vignette_intensity: 0,
+  exposure_contrast_saturation: {
+    exposure: 0,
+    contrast: 1,
+    saturation: 1
+  },
+  lift_gamma_gain: {
+    lift: 0,
+    gamma: 1,
+    gain: 1
+  },
+  bloom: {
+    intensity: 0,
+    threshold: 0.8,
+    radius: 2
+  },
   gradient_map: {
     enabled: false,
     stops: [
@@ -203,6 +218,15 @@ const _sfc_main = defineComponent({
       uniform float u_time;
       uniform float u_sharpen_intensity;
       uniform float u_vignette_intensity;
+      uniform float u_exposure;
+      uniform float u_contrast;
+      uniform float u_saturation;
+      uniform float u_lift;
+      uniform float u_gamma;
+      uniform float u_gain;
+      uniform float u_bloom_intensity;
+      uniform float u_bloom_threshold;
+      uniform float u_bloom_radius;
 
       in vec2 v_texCoord;
       out vec4 fragColor;
@@ -217,6 +241,65 @@ const _sfc_main = defineComponent({
 
       vec3 blendSoftLight(vec3 base, vec3 blend) {
         return (1.0 - 2.0 * blend) * base * base + 2.0 * blend * base;
+      }
+
+      vec3 applyEcsLgg(vec3 inputColor) {
+        vec3 color = inputColor * pow(2.0, u_exposure);
+        color = (color - 0.5) * u_contrast + 0.5;
+
+        float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        color = vec3(luminance) + (color - vec3(luminance)) * u_saturation;
+
+        color = color + vec3(u_lift);
+        color = pow(max(color, vec3(1e-6)), vec3(1.0 / max(u_gamma, 1e-3)));
+        color = color * vec3(u_gain);
+        return clamp(color, 0.0, 1.0);
+      }
+
+      vec3 applyCurves(vec3 color) {
+        float rGraded = texture(u_curvesLut, vec2(color.r, 0.5)).r;
+        float gGraded = texture(u_curvesLut, vec2(color.g, 0.5)).g;
+        float bGraded = texture(u_curvesLut, vec2(color.b, 0.5)).b;
+
+        rGraded = texture(u_curvesLut, vec2(rGraded, 0.5)).a;
+        gGraded = texture(u_curvesLut, vec2(gGraded, 0.5)).a;
+        bGraded = texture(u_curvesLut, vec2(bGraded, 0.5)).a;
+
+        return clamp(vec3(rGraded, gGraded, bGraded), 0.0, 1.0);
+      }
+
+      vec3 applyGradientMap(vec3 color) {
+        if (u_gradientEnabled != 1) {
+          return color;
+        }
+
+        float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        vec3 gradColor = texture(u_gradientMap, vec2(luminance, 0.5)).rgb;
+
+        vec3 blended;
+        if (u_gradientBlendingMode == 0) {
+          blended = gradColor;
+        } else if (u_gradientBlendingMode == 1) {
+          blended = blendOverlay(color, gradColor);
+        } else if (u_gradientBlendingMode == 2) {
+          blended = blendSoftLight(color, gradColor);
+        } else if (u_gradientBlendingMode == 3) {
+          blended = color * gradColor;
+        } else if (u_gradientBlendingMode == 4) {
+          blended = 1.0 - (1.0 - color) * (1.0 - gradColor);
+        } else {
+          blended = gradColor;
+        }
+
+        return mix(color, blended, u_gradientOpacity);
+      }
+
+      vec3 processSampleColor(vec2 sampleUv) {
+        vec3 sampled = texture(u_image, sampleUv).rgb;
+        sampled = applyEcsLgg(sampled);
+        sampled = applyCurves(sampled);
+        sampled = applyGradientMap(sampled);
+        return sampled;
       }
 
       void main() {
@@ -245,48 +328,72 @@ const _sfc_main = defineComponent({
           color.g = centerColor.g;
           color.b = texture(u_image, uv - offset).b;
         }
+
+        color = applyEcsLgg(color);
         
         // 3. Tonal Curves
-        float rGraded = texture(u_curvesLut, vec2(color.r, 0.5)).r;
-        float gGraded = texture(u_curvesLut, vec2(color.g, 0.5)).g;
-        float bGraded = texture(u_curvesLut, vec2(color.b, 0.5)).b;
-        
-        rGraded = texture(u_curvesLut, vec2(rGraded, 0.5)).a;
-        gGraded = texture(u_curvesLut, vec2(gGraded, 0.5)).a;
-        bGraded = texture(u_curvesLut, vec2(bGraded, 0.5)).a;
-        
-        color = clamp(vec3(rGraded, gGraded, bGraded), 0.0, 1.0);
+        color = applyCurves(color);
         
         // 4. Gradient Map
-        if (u_gradientEnabled == 1) {
-          float luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
-          vec3 gradColor = texture(u_gradientMap, vec2(luminance, 0.5)).rgb;
-          
-          vec3 blended;
-          if (u_gradientBlendingMode == 0) {
-            blended = gradColor;
-          } else if (u_gradientBlendingMode == 1) {
-            blended = blendOverlay(color, gradColor);
-          } else if (u_gradientBlendingMode == 2) {
-            blended = blendSoftLight(color, gradColor);
-          } else if (u_gradientBlendingMode == 3) {
-            blended = color * gradColor;
-          } else if (u_gradientBlendingMode == 4) {
-            blended = 1.0 - (1.0 - color) * (1.0 - gradColor);
-          } else {
-            blended = gradColor;
+        color = applyGradientMap(color);
+
+        // 5. Bloom
+        if (u_bloom_intensity > 0.0 && u_bloom_radius > 0.0) {
+          vec2 texelSize = 1.0 / vec2(textureSize(u_image, 0));
+          vec2 bloomStep = texelSize * u_bloom_radius;
+          float bloomMaskDenom = max(1e-6, 1.0 - u_bloom_threshold);
+
+          vec3 bloomAccum = vec3(0.0);
+          float weightAccum = 0.0;
+
+          float centerWeight = 0.227027;
+          float centerLum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+          float centerMask = clamp((centerLum - u_bloom_threshold) / bloomMaskDenom, 0.0, 1.0);
+          bloomAccum += color * centerMask * centerWeight;
+          weightAccum += centerWeight;
+
+          float nearWeight = 0.316216;
+          vec2 nearOffsets[4];
+          nearOffsets[0] = vec2(1.3846, 0.0);
+          nearOffsets[1] = vec2(-1.3846, 0.0);
+          nearOffsets[2] = vec2(0.0, 1.3846);
+          nearOffsets[3] = vec2(0.0, -1.3846);
+
+          for (int i = 0; i < 4; i++) {
+            vec3 sampleColor = processSampleColor(uv + nearOffsets[i] * bloomStep);
+            float sampleLum = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
+            float sampleMask = clamp((sampleLum - u_bloom_threshold) / bloomMaskDenom, 0.0, 1.0);
+            bloomAccum += sampleColor * sampleMask * nearWeight;
+            weightAccum += nearWeight;
           }
-          color = mix(color, blended, u_gradientOpacity);
+
+          float farWeight = 0.070270;
+          vec2 farOffsets[4];
+          farOffsets[0] = vec2(3.2308, 3.2308);
+          farOffsets[1] = vec2(-3.2308, 3.2308);
+          farOffsets[2] = vec2(3.2308, -3.2308);
+          farOffsets[3] = vec2(-3.2308, -3.2308);
+
+          for (int i = 0; i < 4; i++) {
+            vec3 sampleColor = processSampleColor(uv + farOffsets[i] * bloomStep);
+            float sampleLum = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
+            float sampleMask = clamp((sampleLum - u_bloom_threshold) / bloomMaskDenom, 0.0, 1.0);
+            bloomAccum += sampleColor * sampleMask * farWeight;
+            weightAccum += farWeight;
+          }
+
+          vec3 bloom = bloomAccum / max(weightAccum, 1e-6);
+          color = clamp(color + bloom * u_bloom_intensity, 0.0, 1.0);
         }
         
-        // 5. Vignette Falloff
+        // 6. Vignette Falloff
         if (u_vignette_intensity > 0.0) {
           float rawDist = length(uv - vec2(0.5)) * 2.0;
           float vignette = clamp(1.0 - (rawDist * rawDist * u_vignette_intensity), 0.0, 1.0);
           color *= vignette;
         }
         
-        // 6. Film Grain
+        // 7. Film Grain
         if (u_grain_intensity > 0.0) {
           float noise = fract(sin(dot(uv.xy + u_time, vec2(12.9898, 78.233))) * 43758.5453);
           float grainAmount = (noise - 0.5) * u_grain_intensity;
@@ -458,6 +565,15 @@ const _sfc_main = defineComponent({
       gl.uniform1f(gl.getUniformLocation(program, "u_time"), performance.now() / 1e3);
       gl.uniform1f(gl.getUniformLocation(program, "u_sharpen_intensity"), params.sharpen);
       gl.uniform1f(gl.getUniformLocation(program, "u_vignette_intensity"), params.vignette_intensity);
+      gl.uniform1f(gl.getUniformLocation(program, "u_exposure"), params.exposure_contrast_saturation.exposure);
+      gl.uniform1f(gl.getUniformLocation(program, "u_contrast"), params.exposure_contrast_saturation.contrast);
+      gl.uniform1f(gl.getUniformLocation(program, "u_saturation"), params.exposure_contrast_saturation.saturation);
+      gl.uniform1f(gl.getUniformLocation(program, "u_lift"), params.lift_gamma_gain.lift);
+      gl.uniform1f(gl.getUniformLocation(program, "u_gamma"), params.lift_gamma_gain.gamma);
+      gl.uniform1f(gl.getUniformLocation(program, "u_gain"), params.lift_gamma_gain.gain);
+      gl.uniform1f(gl.getUniformLocation(program, "u_bloom_intensity"), params.bloom.intensity);
+      gl.uniform1f(gl.getUniformLocation(program, "u_bloom_threshold"), params.bloom.threshold);
+      gl.uniform1f(gl.getUniformLocation(program, "u_bloom_radius"), params.bloom.radius);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       computeClientHistogram();
     }
@@ -517,6 +633,21 @@ const _sfc_main = defineComponent({
         params.film_grain = typeof data.film_grain === "number" ? data.film_grain : 0;
         params.sharpen = typeof data.sharpen === "number" ? data.sharpen : 0;
         params.vignette_intensity = typeof data.vignette_intensity === "number" ? data.vignette_intensity : 0;
+        if (data.exposure_contrast_saturation) {
+          params.exposure_contrast_saturation.exposure = typeof data.exposure_contrast_saturation.exposure === "number" ? data.exposure_contrast_saturation.exposure : 0;
+          params.exposure_contrast_saturation.contrast = typeof data.exposure_contrast_saturation.contrast === "number" ? data.exposure_contrast_saturation.contrast : 1;
+          params.exposure_contrast_saturation.saturation = typeof data.exposure_contrast_saturation.saturation === "number" ? data.exposure_contrast_saturation.saturation : 1;
+        }
+        if (data.lift_gamma_gain) {
+          params.lift_gamma_gain.lift = typeof data.lift_gamma_gain.lift === "number" ? data.lift_gamma_gain.lift : 0;
+          params.lift_gamma_gain.gamma = typeof data.lift_gamma_gain.gamma === "number" ? data.lift_gamma_gain.gamma : 1;
+          params.lift_gamma_gain.gain = typeof data.lift_gamma_gain.gain === "number" ? data.lift_gamma_gain.gain : 1;
+        }
+        if (data.bloom) {
+          params.bloom.intensity = typeof data.bloom.intensity === "number" ? data.bloom.intensity : 0;
+          params.bloom.threshold = typeof data.bloom.threshold === "number" ? data.bloom.threshold : 0.8;
+          params.bloom.radius = typeof data.bloom.radius === "number" ? data.bloom.radius : 2;
+        }
         if (data.gradient_map) {
           params.gradient_map.enabled = !!data.gradient_map.enabled;
           params.gradient_map.stops = data.gradient_map.stops || [
@@ -539,10 +670,17 @@ const _sfc_main = defineComponent({
     }
     let animFrameId = 0;
     let cleanupWipeDragListeners = null;
+    let cleanupStopDragListeners = null;
     function clearWipeDragListeners() {
       if (cleanupWipeDragListeners) {
         cleanupWipeDragListeners();
         cleanupWipeDragListeners = null;
+      }
+    }
+    function clearStopDragListeners() {
+      if (cleanupStopDragListeners) {
+        cleanupStopDragListeners();
+        cleanupStopDragListeners = null;
       }
     }
     function requestDraw() {
@@ -764,27 +902,48 @@ const _sfc_main = defineComponent({
       onParamChange();
     }
     function startStopDrag(idx, e) {
+      if (e.button !== 0) {
+        return;
+      }
+      e.preventDefault();
       e.stopPropagation();
+      clearStopDragListeners();
       activeStopIndex.value = idx;
+      const onGlobalUp = () => {
+        params.gradient_map.stops.sort((a, b) => a.offset - b.offset);
+        if (activeStopIndex.value !== null && params.gradient_map.stops.length > 0) {
+          const safeIndex = Math.max(0, Math.min(activeStopIndex.value, params.gradient_map.stops.length - 1));
+          const currentOffset = params.gradient_map.stops[safeIndex]?.offset;
+          if (typeof currentOffset === "number") {
+            activeStopIndex.value = params.gradient_map.stops.findIndex((s) => s.offset === currentOffset);
+          }
+        }
+        clearStopDragListeners();
+      };
       const onGlobalMove = (moveEvent) => {
+        if ((moveEvent.buttons & 1) !== 1) {
+          onGlobalUp();
+          return;
+        }
         const bar = gradientBar.value;
         if (!bar || activeStopIndex.value === null) return;
+        moveEvent.preventDefault();
         const rect = bar.getBoundingClientRect();
         const offset = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
         params.gradient_map.stops[activeStopIndex.value].offset = offset;
         onParamChange();
       };
-      const onGlobalUp = () => {
-        params.gradient_map.stops.sort((a, b) => a.offset - b.offset);
-        if (activeStopIndex.value !== null) {
-          const currentOffset = params.gradient_map.stops[activeStopIndex.value].offset;
-          activeStopIndex.value = params.gradient_map.stops.findIndex((s) => s.offset === currentOffset);
-        }
-        window.removeEventListener("mousemove", onGlobalMove);
-        window.removeEventListener("mouseup", onGlobalUp);
+      const onWindowBlur = () => {
+        onGlobalUp();
       };
       window.addEventListener("mousemove", onGlobalMove);
       window.addEventListener("mouseup", onGlobalUp);
+      window.addEventListener("blur", onWindowBlur);
+      cleanupStopDragListeners = () => {
+        window.removeEventListener("mousemove", onGlobalMove);
+        window.removeEventListener("mouseup", onGlobalUp);
+        window.removeEventListener("blur", onWindowBlur);
+      };
     }
     function removeStop(idx) {
       if (params.gradient_map.stops.length <= 2) return;
@@ -816,6 +975,15 @@ const _sfc_main = defineComponent({
       params.film_grain = defaults.film_grain;
       params.sharpen = defaults.sharpen;
       params.vignette_intensity = defaults.vignette_intensity;
+      params.exposure_contrast_saturation.exposure = defaults.exposure_contrast_saturation.exposure;
+      params.exposure_contrast_saturation.contrast = defaults.exposure_contrast_saturation.contrast;
+      params.exposure_contrast_saturation.saturation = defaults.exposure_contrast_saturation.saturation;
+      params.lift_gamma_gain.lift = defaults.lift_gamma_gain.lift;
+      params.lift_gamma_gain.gamma = defaults.lift_gamma_gain.gamma;
+      params.lift_gamma_gain.gain = defaults.lift_gamma_gain.gain;
+      params.bloom.intensity = defaults.bloom.intensity;
+      params.bloom.threshold = defaults.bloom.threshold;
+      params.bloom.radius = defaults.bloom.radius;
       params.gradient_map.enabled = defaults.gradient_map.enabled;
       params.gradient_map.blending_mode = defaults.gradient_map.blending_mode;
       params.gradient_map.opacity = defaults.gradient_map.opacity;
@@ -855,6 +1023,7 @@ const _sfc_main = defineComponent({
       if (animFrameId) cancelAnimationFrame(animFrameId);
       isWiping.value = false;
       clearWipeDragListeners();
+      clearStopDragListeners();
     });
     return {
       params,
@@ -984,11 +1153,47 @@ const _hoisted_60 = { class: "control-row-vertical" };
 const _hoisted_61 = { class: "slider-labels" };
 const _hoisted_62 = { class: "value-display" };
 const _hoisted_63 = ["value"];
+const _hoisted_64 = { class: "control-row-vertical" };
+const _hoisted_65 = { class: "slider-labels" };
+const _hoisted_66 = { class: "value-display" };
+const _hoisted_67 = ["value"];
+const _hoisted_68 = { class: "control-row-vertical" };
+const _hoisted_69 = { class: "slider-labels" };
+const _hoisted_70 = { class: "value-display" };
+const _hoisted_71 = ["value"];
+const _hoisted_72 = { class: "control-row-vertical" };
+const _hoisted_73 = { class: "slider-labels" };
+const _hoisted_74 = { class: "value-display" };
+const _hoisted_75 = ["value"];
+const _hoisted_76 = { class: "control-row-vertical" };
+const _hoisted_77 = { class: "slider-labels" };
+const _hoisted_78 = { class: "value-display" };
+const _hoisted_79 = ["value"];
+const _hoisted_80 = { class: "control-row-vertical" };
+const _hoisted_81 = { class: "slider-labels" };
+const _hoisted_82 = { class: "value-display" };
+const _hoisted_83 = ["value"];
+const _hoisted_84 = { class: "control-row-vertical" };
+const _hoisted_85 = { class: "slider-labels" };
+const _hoisted_86 = { class: "value-display" };
+const _hoisted_87 = ["value"];
+const _hoisted_88 = { class: "control-row-vertical" };
+const _hoisted_89 = { class: "slider-labels" };
+const _hoisted_90 = { class: "value-display" };
+const _hoisted_91 = ["value"];
+const _hoisted_92 = { class: "control-row-vertical" };
+const _hoisted_93 = { class: "slider-labels" };
+const _hoisted_94 = { class: "value-display" };
+const _hoisted_95 = ["value"];
+const _hoisted_96 = { class: "control-row-vertical" };
+const _hoisted_97 = { class: "slider-labels" };
+const _hoisted_98 = { class: "value-display" };
+const _hoisted_99 = ["value"];
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return openBlock(), createElementBlock("div", _hoisted_1, [
     createBaseVNode("div", _hoisted_2, [
       createBaseVNode("div", _hoisted_3, [
-        _cache[38] || (_cache[38] = createBaseVNode("span", { class: "header-title" }, "Grading & Shader Processor", -1)),
+        _cache[47] || (_cache[47] = createBaseVNode("span", { class: "header-title" }, "Grading & Shader Processor", -1)),
         createBaseVNode("span", _hoisted_4, "Node #" + toDisplayString(_ctx.nodeId), 1)
       ]),
       createBaseVNode("button", {
@@ -1011,7 +1216,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
           class: "section-header",
           onClick: _cache[8] || (_cache[8] = ($event) => _ctx.toggleSection("preview"))
         }, [
-          _cache[39] || (_cache[39] = createBaseVNode("span", { class: "section-title" }, "Visual Preview & Compare", -1)),
+          _cache[48] || (_cache[48] = createBaseVNode("span", { class: "section-title" }, "Visual Preview & Compare", -1)),
           createBaseVNode("span", _hoisted_6, toDisplayString(_ctx.collapsedSections.preview ? "▼" : "▲"), 1)
         ]),
         withDirectives(createBaseVNode("div", _hoisted_7, [
@@ -1064,7 +1269,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
               style: normalizeStyle(_ctx.handleStyle),
               onMousedown: _cache[13] || (_cache[13] = (...args) => _ctx.startWipeDrag && _ctx.startWipeDrag(...args)),
               onTouchstart: _cache[14] || (_cache[14] = (...args) => _ctx.startWipeDrag && _ctx.startWipeDrag(...args))
-            }, [..._cache[40] || (_cache[40] = [
+            }, [..._cache[49] || (_cache[49] = [
               createBaseVNode("div", { class: "handle-line" }, null, -1),
               createBaseVNode("div", { class: "handle-thumb" }, [
                 createBaseVNode("svg", {
@@ -1079,9 +1284,9 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
                 ])
               ], -1)
             ])], 36),
-            _cache[42] || (_cache[42] = createBaseVNode("div", { class: "wipe-label before-label" }, "Before", -1)),
-            _cache[43] || (_cache[43] = createBaseVNode("div", { class: "wipe-label after-label" }, "After", -1)),
-            !_ctx.hasImage ? (openBlock(), createElementBlock("div", _hoisted_9, [..._cache[41] || (_cache[41] = [
+            _cache[51] || (_cache[51] = createBaseVNode("div", { class: "wipe-label before-label" }, "Before", -1)),
+            _cache[52] || (_cache[52] = createBaseVNode("div", { class: "wipe-label after-label" }, "After", -1)),
+            !_ctx.hasImage ? (openBlock(), createElementBlock("div", _hoisted_9, [..._cache[50] || (_cache[50] = [
               createBaseVNode("svg", {
                 viewBox: "0 0 24 24",
                 width: "48",
@@ -1119,7 +1324,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
           class: "section-header",
           onClick: _cache[17] || (_cache[17] = ($event) => _ctx.toggleSection("curves"))
         }, [
-          _cache[44] || (_cache[44] = createBaseVNode("span", { class: "section-title" }, "RGB Tonal Curves", -1)),
+          _cache[53] || (_cache[53] = createBaseVNode("span", { class: "section-title" }, "RGB Tonal Curves", -1)),
           createBaseVNode("span", _hoisted_10, toDisplayString(_ctx.collapsedSections.curves ? "▼" : "▲"), 1)
         ]),
         withDirectives(createBaseVNode("div", _hoisted_11, [
@@ -1146,7 +1351,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
               onMouseup: _cache[21] || (_cache[21] = (...args) => _ctx.onCurveMouseUp && _ctx.onCurveMouseUp(...args)),
               onMouseleave: _cache[22] || (_cache[22] = (...args) => _ctx.onCurveMouseLeave && _ctx.onCurveMouseLeave(...args))
             }, [
-              _cache[45] || (_cache[45] = createStaticVNode('<line x1="64" y1="0" x2="64" y2="256" class="grid-line" data-v-5531288d></line><line x1="128" y1="0" x2="128" y2="256" class="grid-line" data-v-5531288d></line><line x1="192" y1="0" x2="192" y2="256" class="grid-line" data-v-5531288d></line><line x1="0" y1="64" x2="256" y2="64" class="grid-line" data-v-5531288d></line><line x1="0" y1="128" x2="256" y2="128" class="grid-line" data-v-5531288d></line><line x1="0" y1="192" x2="256" y2="192" class="grid-line" data-v-5531288d></line><line x1="0" y1="0" x2="256" y2="256" class="diagonal-line" data-v-5531288d></line>', 7)),
+              _cache[54] || (_cache[54] = createStaticVNode('<line x1="64" y1="0" x2="64" y2="256" class="grid-line" data-v-b5bbeb70></line><line x1="128" y1="0" x2="128" y2="256" class="grid-line" data-v-b5bbeb70></line><line x1="192" y1="0" x2="192" y2="256" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="64" x2="256" y2="64" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="128" x2="256" y2="128" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="192" x2="256" y2="192" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="0" x2="256" y2="256" class="diagonal-line" data-v-b5bbeb70></line>', 7)),
               (openBlock(true), createElementBlock(Fragment, null, renderList(["rgb", "r", "g", "b"].filter((c) => c !== _ctx.activeChannel), (ch) => {
                 return openBlock(), createElementBlock("path", {
                   key: "path-" + ch,
@@ -1174,7 +1379,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
             ], 544))
           ]),
           createBaseVNode("div", _hoisted_20, [
-            _cache[46] || (_cache[46] = createBaseVNode("div", { class: "histogram-header" }, "Live Output Histogram", -1)),
+            _cache[55] || (_cache[55] = createBaseVNode("div", { class: "histogram-header" }, "Live Output Histogram", -1)),
             (openBlock(), createElementBlock("svg", _hoisted_21, [
               _ctx.activeChannel === "rgb" || _ctx.activeChannel === "r" ? (openBlock(), createElementBlock("path", {
                 key: 0,
@@ -1209,13 +1414,13 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
           class: "section-header",
           onClick: _cache[23] || (_cache[23] = ($event) => _ctx.toggleSection("colorMap"))
         }, [
-          _cache[47] || (_cache[47] = createBaseVNode("span", { class: "section-title" }, "Color Balancing & Gradient Map", -1)),
+          _cache[56] || (_cache[56] = createBaseVNode("span", { class: "section-title" }, "Color Balancing & Gradient Map", -1)),
           createBaseVNode("span", _hoisted_26, toDisplayString(_ctx.collapsedSections.colorMap ? "▼" : "▲"), 1)
         ]),
         withDirectives(createBaseVNode("div", _hoisted_27, [
           createBaseVNode("div", _hoisted_28, [
             createBaseVNode("div", _hoisted_29, [
-              _cache[48] || (_cache[48] = createBaseVNode("label", { class: "control-label" }, "Enable Gradient Map", -1)),
+              _cache[57] || (_cache[57] = createBaseVNode("label", { class: "control-label" }, "Enable Gradient Map", -1)),
               withDirectives(createBaseVNode("input", {
                 type: "checkbox",
                 "onUpdate:modelValue": _cache[24] || (_cache[24] = ($event) => _ctx.params.gradient_map.enabled = $event),
@@ -1227,7 +1432,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
             ]),
             _ctx.params.gradient_map.enabled ? (openBlock(), createElementBlock("div", _hoisted_30, [
               createBaseVNode("div", _hoisted_31, [
-                _cache[49] || (_cache[49] = createBaseVNode("label", { class: "control-label" }, "Blending Mode", -1)),
+                _cache[58] || (_cache[58] = createBaseVNode("label", { class: "control-label" }, "Blending Mode", -1)),
                 withDirectives(createBaseVNode("select", {
                   "onUpdate:modelValue": _cache[26] || (_cache[26] = ($event) => _ctx.params.gradient_map.blending_mode = $event),
                   onChange: _cache[27] || (_cache[27] = (...args) => _ctx.onParamChange && _ctx.onParamChange(...args)),
@@ -1245,7 +1450,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
               ]),
               createBaseVNode("div", _hoisted_33, [
                 createBaseVNode("div", _hoisted_34, [
-                  _cache[50] || (_cache[50] = createBaseVNode("span", { class: "control-label" }, "Opacity", -1)),
+                  _cache[59] || (_cache[59] = createBaseVNode("span", { class: "control-label" }, "Opacity", -1)),
                   createBaseVNode("span", _hoisted_35, toDisplayString(Math.round(_ctx.params.gradient_map.opacity * 100)) + "%", 1)
                 ]),
                 createBaseVNode("input", {
@@ -1261,7 +1466,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
                 }, null, 40, _hoisted_36)
               ]),
               createBaseVNode("div", _hoisted_37, [
-                _cache[54] || (_cache[54] = createBaseVNode("label", { class: "control-label" }, "Gradient Stops (Click to add, Drag offset, Double click to remove)", -1)),
+                _cache[63] || (_cache[63] = createBaseVNode("label", { class: "control-label" }, "Gradient Stops (Click to add, Drag offset, Double click to remove)", -1)),
                 createBaseVNode("div", {
                   class: "gradient-bar-track",
                   ref: "gradientBar",
@@ -1287,7 +1492,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
                   createBaseVNode("div", _hoisted_40, "Stop #" + toDisplayString(_ctx.activeStopIndex + 1), 1),
                   createBaseVNode("div", _hoisted_41, [
                     createBaseVNode("div", _hoisted_42, [
-                      _cache[51] || (_cache[51] = createBaseVNode("label", null, "Offset:", -1)),
+                      _cache[60] || (_cache[60] = createBaseVNode("label", null, "Offset:", -1)),
                       createBaseVNode("input", {
                         type: "number",
                         min: "0",
@@ -1296,10 +1501,10 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
                         onInput: _cache[30] || (_cache[30] = ($event) => _ctx.setStopOffset(_ctx.activeStopIndex, parseInt($event.target.value) / 100)),
                         class: "stop-num-input"
                       }, null, 40, _hoisted_43),
-                      _cache[52] || (_cache[52] = createTextVNode("% ", -1))
+                      _cache[61] || (_cache[61] = createTextVNode("% ", -1))
                     ]),
                     createBaseVNode("div", _hoisted_44, [
-                      _cache[53] || (_cache[53] = createBaseVNode("label", null, "Color:", -1)),
+                      _cache[62] || (_cache[62] = createBaseVNode("label", null, "Color:", -1)),
                       withDirectives(createBaseVNode("input", {
                         type: "color",
                         "onUpdate:modelValue": _cache[31] || (_cache[31] = ($event) => _ctx.params.gradient_map.stops[_ctx.activeStopIndex].color = $event),
@@ -1325,14 +1530,14 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
           class: "section-header",
           onClick: _cache[33] || (_cache[33] = ($event) => _ctx.toggleSection("effects"))
         }, [
-          _cache[55] || (_cache[55] = createBaseVNode("span", { class: "section-title" }, "Post-Processing Effects", -1)),
+          _cache[64] || (_cache[64] = createBaseVNode("span", { class: "section-title" }, "Post-Processing Effects", -1)),
           createBaseVNode("span", _hoisted_45, toDisplayString(_ctx.collapsedSections.effects ? "▼" : "▲"), 1)
         ]),
         withDirectives(createBaseVNode("div", _hoisted_46, [
           createBaseVNode("div", _hoisted_47, [
             createBaseVNode("div", _hoisted_48, [
               createBaseVNode("div", _hoisted_49, [
-                _cache[56] || (_cache[56] = createBaseVNode("span", { class: "control-label" }, "Chromatic Aberration", -1)),
+                _cache[65] || (_cache[65] = createBaseVNode("span", { class: "control-label" }, "Chromatic Aberration", -1)),
                 createBaseVNode("span", _hoisted_50, toDisplayString(_ctx.params.chromatic_aberration.toFixed(3)), 1)
               ]),
               createBaseVNode("input", {
@@ -1349,7 +1554,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
             ]),
             createBaseVNode("div", _hoisted_52, [
               createBaseVNode("div", _hoisted_53, [
-                _cache[57] || (_cache[57] = createBaseVNode("span", { class: "control-label" }, "Cinematic Film Grain", -1)),
+                _cache[66] || (_cache[66] = createBaseVNode("span", { class: "control-label" }, "Cinematic Film Grain", -1)),
                 createBaseVNode("span", _hoisted_54, toDisplayString(_ctx.params.film_grain.toFixed(3)), 1)
               ]),
               createBaseVNode("input", {
@@ -1366,7 +1571,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
             ]),
             createBaseVNode("div", _hoisted_56, [
               createBaseVNode("div", _hoisted_57, [
-                _cache[58] || (_cache[58] = createBaseVNode("span", { class: "control-label" }, "Sharpen Intensity", -1)),
+                _cache[67] || (_cache[67] = createBaseVNode("span", { class: "control-label" }, "Sharpen Intensity", -1)),
                 createBaseVNode("span", _hoisted_58, toDisplayString(_ctx.params.sharpen.toFixed(2)), 1)
               ]),
               createBaseVNode("input", {
@@ -1383,7 +1588,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
             ]),
             createBaseVNode("div", _hoisted_60, [
               createBaseVNode("div", _hoisted_61, [
-                _cache[59] || (_cache[59] = createBaseVNode("span", { class: "control-label" }, "Vignette Falloff", -1)),
+                _cache[68] || (_cache[68] = createBaseVNode("span", { class: "control-label" }, "Vignette Falloff", -1)),
                 createBaseVNode("span", _hoisted_62, toDisplayString(_ctx.params.vignette_intensity.toFixed(2)), 1)
               ]),
               createBaseVNode("input", {
@@ -1397,6 +1602,162 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
                 }),
                 class: "styled-range"
               }, null, 40, _hoisted_63)
+            ]),
+            _cache[78] || (_cache[78] = createBaseVNode("div", { class: "effects-group-title" }, "Exposure / Contrast / Saturation", -1)),
+            createBaseVNode("div", _hoisted_64, [
+              createBaseVNode("div", _hoisted_65, [
+                _cache[69] || (_cache[69] = createBaseVNode("span", { class: "control-label" }, "Exposure (Stops)", -1)),
+                createBaseVNode("span", _hoisted_66, toDisplayString(_ctx.params.exposure_contrast_saturation.exposure.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "-200",
+                max: "200",
+                value: _ctx.params.exposure_contrast_saturation.exposure * 100,
+                onInput: _cache[38] || (_cache[38] = ($event) => {
+                  _ctx.params.exposure_contrast_saturation.exposure = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_67)
+            ]),
+            createBaseVNode("div", _hoisted_68, [
+              createBaseVNode("div", _hoisted_69, [
+                _cache[70] || (_cache[70] = createBaseVNode("span", { class: "control-label" }, "Contrast", -1)),
+                createBaseVNode("span", _hoisted_70, toDisplayString(_ctx.params.exposure_contrast_saturation.contrast.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "0",
+                max: "300",
+                value: _ctx.params.exposure_contrast_saturation.contrast * 100,
+                onInput: _cache[39] || (_cache[39] = ($event) => {
+                  _ctx.params.exposure_contrast_saturation.contrast = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_71)
+            ]),
+            createBaseVNode("div", _hoisted_72, [
+              createBaseVNode("div", _hoisted_73, [
+                _cache[71] || (_cache[71] = createBaseVNode("span", { class: "control-label" }, "Saturation", -1)),
+                createBaseVNode("span", _hoisted_74, toDisplayString(_ctx.params.exposure_contrast_saturation.saturation.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "0",
+                max: "300",
+                value: _ctx.params.exposure_contrast_saturation.saturation * 100,
+                onInput: _cache[40] || (_cache[40] = ($event) => {
+                  _ctx.params.exposure_contrast_saturation.saturation = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_75)
+            ]),
+            _cache[79] || (_cache[79] = createBaseVNode("div", { class: "effects-group-title" }, "Lift / Gamma / Gain", -1)),
+            createBaseVNode("div", _hoisted_76, [
+              createBaseVNode("div", _hoisted_77, [
+                _cache[72] || (_cache[72] = createBaseVNode("span", { class: "control-label" }, "Lift", -1)),
+                createBaseVNode("span", _hoisted_78, toDisplayString(_ctx.params.lift_gamma_gain.lift.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "-100",
+                max: "100",
+                value: _ctx.params.lift_gamma_gain.lift * 100,
+                onInput: _cache[41] || (_cache[41] = ($event) => {
+                  _ctx.params.lift_gamma_gain.lift = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_79)
+            ]),
+            createBaseVNode("div", _hoisted_80, [
+              createBaseVNode("div", _hoisted_81, [
+                _cache[73] || (_cache[73] = createBaseVNode("span", { class: "control-label" }, "Gamma", -1)),
+                createBaseVNode("span", _hoisted_82, toDisplayString(_ctx.params.lift_gamma_gain.gamma.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "10",
+                max: "400",
+                value: _ctx.params.lift_gamma_gain.gamma * 100,
+                onInput: _cache[42] || (_cache[42] = ($event) => {
+                  _ctx.params.lift_gamma_gain.gamma = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_83)
+            ]),
+            createBaseVNode("div", _hoisted_84, [
+              createBaseVNode("div", _hoisted_85, [
+                _cache[74] || (_cache[74] = createBaseVNode("span", { class: "control-label" }, "Gain", -1)),
+                createBaseVNode("span", _hoisted_86, toDisplayString(_ctx.params.lift_gamma_gain.gain.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "0",
+                max: "300",
+                value: _ctx.params.lift_gamma_gain.gain * 100,
+                onInput: _cache[43] || (_cache[43] = ($event) => {
+                  _ctx.params.lift_gamma_gain.gain = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_87)
+            ]),
+            _cache[80] || (_cache[80] = createBaseVNode("div", { class: "effects-group-title" }, "Bloom", -1)),
+            createBaseVNode("div", _hoisted_88, [
+              createBaseVNode("div", _hoisted_89, [
+                _cache[75] || (_cache[75] = createBaseVNode("span", { class: "control-label" }, "Intensity", -1)),
+                createBaseVNode("span", _hoisted_90, toDisplayString(_ctx.params.bloom.intensity.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "0",
+                max: "200",
+                value: _ctx.params.bloom.intensity * 100,
+                onInput: _cache[44] || (_cache[44] = ($event) => {
+                  _ctx.params.bloom.intensity = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_91)
+            ]),
+            createBaseVNode("div", _hoisted_92, [
+              createBaseVNode("div", _hoisted_93, [
+                _cache[76] || (_cache[76] = createBaseVNode("span", { class: "control-label" }, "Threshold", -1)),
+                createBaseVNode("span", _hoisted_94, toDisplayString(_ctx.params.bloom.threshold.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "0",
+                max: "100",
+                value: _ctx.params.bloom.threshold * 100,
+                onInput: _cache[45] || (_cache[45] = ($event) => {
+                  _ctx.params.bloom.threshold = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_95)
+            ]),
+            createBaseVNode("div", _hoisted_96, [
+              createBaseVNode("div", _hoisted_97, [
+                _cache[77] || (_cache[77] = createBaseVNode("span", { class: "control-label" }, "Radius", -1)),
+                createBaseVNode("span", _hoisted_98, toDisplayString(_ctx.params.bloom.radius.toFixed(2)), 1)
+              ]),
+              createBaseVNode("input", {
+                type: "range",
+                min: "50",
+                max: "800",
+                value: _ctx.params.bloom.radius * 100,
+                onInput: _cache[46] || (_cache[46] = ($event) => {
+                  _ctx.params.bloom.radius = parseFloat($event.target.value) / 100;
+                  _ctx.onParamChange();
+                }),
+                class: "styled-range"
+              }, null, 40, _hoisted_99)
             ])
           ])
         ], 512), [
@@ -1406,7 +1767,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     ])
   ]);
 }
-const RealTimeGradingProcessor = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-5531288d"]]);
+const RealTimeGradingProcessor = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-b5bbeb70"]]);
 const MIN_W = 840;
 const MIN_H = 820;
 function isolateContainerEvents(container) {
