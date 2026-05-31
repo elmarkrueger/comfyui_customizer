@@ -93,7 +93,7 @@
       </div>
 
       <!-- Section 2: Tonal Curves Editor -->
-      <div class="panel-section" :class="{ 'is-collapsed': collapsedSections.curves }">
+      <div class="panel-section curves-panel" :class="{ 'is-collapsed': collapsedSections.curves }">
         <div class="section-header" @click="toggleSection('curves')">
           <span class="section-title">RGB Tonal Curves</span>
           <span class="collapse-icon">{{ collapsedSections.curves ? '▼' : '▲' }}</span>
@@ -279,7 +279,7 @@
       </div>
 
       <!-- Section 4: Shaders and Effects -->
-      <div class="panel-section" :class="{ 'is-collapsed': collapsedSections.effects }">
+      <div class="panel-section effects-panel" :class="{ 'is-collapsed': collapsedSections.effects }">
         <div class="section-header" @click="toggleSection('effects')">
           <span class="section-title">Post-Processing Effects</span>
           <span class="collapse-icon">{{ collapsedSections.effects ? '▼' : '▲' }}</span>
@@ -1907,6 +1907,14 @@ export default defineComponent({
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 8px;
   overflow: hidden;
+}
+
+.effects-panel {
+  order: 2;
+}
+
+.curves-panel {
+  order: 4;
 }
 
 .panel-section.is-collapsed {

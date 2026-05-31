@@ -1318,7 +1318,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         ])
       ], 2),
       createBaseVNode("div", {
-        class: normalizeClass(["panel-section", { "is-collapsed": _ctx.collapsedSections.curves }])
+        class: normalizeClass(["panel-section curves-panel", { "is-collapsed": _ctx.collapsedSections.curves }])
       }, [
         createBaseVNode("div", {
           class: "section-header",
@@ -1351,7 +1351,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
               onMouseup: _cache[21] || (_cache[21] = (...args) => _ctx.onCurveMouseUp && _ctx.onCurveMouseUp(...args)),
               onMouseleave: _cache[22] || (_cache[22] = (...args) => _ctx.onCurveMouseLeave && _ctx.onCurveMouseLeave(...args))
             }, [
-              _cache[54] || (_cache[54] = createStaticVNode('<line x1="64" y1="0" x2="64" y2="256" class="grid-line" data-v-b5bbeb70></line><line x1="128" y1="0" x2="128" y2="256" class="grid-line" data-v-b5bbeb70></line><line x1="192" y1="0" x2="192" y2="256" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="64" x2="256" y2="64" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="128" x2="256" y2="128" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="192" x2="256" y2="192" class="grid-line" data-v-b5bbeb70></line><line x1="0" y1="0" x2="256" y2="256" class="diagonal-line" data-v-b5bbeb70></line>', 7)),
+              _cache[54] || (_cache[54] = createStaticVNode('<line x1="64" y1="0" x2="64" y2="256" class="grid-line" data-v-1356d4e0></line><line x1="128" y1="0" x2="128" y2="256" class="grid-line" data-v-1356d4e0></line><line x1="192" y1="0" x2="192" y2="256" class="grid-line" data-v-1356d4e0></line><line x1="0" y1="64" x2="256" y2="64" class="grid-line" data-v-1356d4e0></line><line x1="0" y1="128" x2="256" y2="128" class="grid-line" data-v-1356d4e0></line><line x1="0" y1="192" x2="256" y2="192" class="grid-line" data-v-1356d4e0></line><line x1="0" y1="0" x2="256" y2="256" class="diagonal-line" data-v-1356d4e0></line>', 7)),
               (openBlock(true), createElementBlock(Fragment, null, renderList(["rgb", "r", "g", "b"].filter((c) => c !== _ctx.activeChannel), (ch) => {
                 return openBlock(), createElementBlock("path", {
                   key: "path-" + ch,
@@ -1524,7 +1524,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         ])
       ], 2),
       createBaseVNode("div", {
-        class: normalizeClass(["panel-section", { "is-collapsed": _ctx.collapsedSections.effects }])
+        class: normalizeClass(["panel-section effects-panel", { "is-collapsed": _ctx.collapsedSections.effects }])
       }, [
         createBaseVNode("div", {
           class: "section-header",
@@ -1767,7 +1767,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     ])
   ]);
 }
-const RealTimeGradingProcessor = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-b5bbeb70"]]);
+const RealTimeGradingProcessor = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-1356d4e0"]]);
 const MIN_W = 840;
 const MIN_H = 820;
 function isolateContainerEvents(container) {
