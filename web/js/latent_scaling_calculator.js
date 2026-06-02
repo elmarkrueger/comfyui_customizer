@@ -45,8 +45,10 @@ const _hoisted_26 = { class: "tel-val highlight" };
 const _hoisted_27 = { class: "telemetry-row" };
 const _hoisted_28 = { class: "tel-val highlight" };
 const _hoisted_29 = { class: "telemetry-row" };
-const _hoisted_30 = { class: "latent-block-size" };
+const _hoisted_30 = { class: "tel-val highlight" };
 const _hoisted_31 = { class: "telemetry-row" };
+const _hoisted_32 = { class: "latent-block-size" };
+const _hoisted_33 = { class: "telemetry-row" };
 const _sfc_main = /* @__PURE__ */ defineComponent({
   __name: "LatentScalingCalculator",
   props: {
@@ -73,6 +75,8 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       vaeFactor: 0,
       factorSource: "",
       resizeMode: "",
+      resizeIntent: "",
+      resizeApplied: false,
       warnings: [],
       executedModelFamily: ""
     });
@@ -102,8 +106,16 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     });
     const resizeModeLabel = computed(() => {
       if (!telemetry.value.resizeMode) return "Pending execution...";
+      if (telemetry.value.resizeMode === "identity") return "Identity (no resize)";
       if (telemetry.value.resizeMode === "pixel") return "Pixel (decode -> resize -> encode)";
       return "Latent";
+    });
+    const resizeIntentLabel = computed(() => {
+      if (!telemetry.value.resizeIntent) return "Pending execution...";
+      if (telemetry.value.resizeIntent === "identity") return "Identity (already matched)";
+      if (telemetry.value.resizeIntent === "upscale") return "Upscale";
+      if (telemetry.value.resizeIntent === "downscale") return "Downscale";
+      return telemetry.value.resizeIntent;
     });
     const coercedReducedSize = computed(() => {
       return alignToFactor(reducedSize.value, factor.value);
@@ -249,6 +261,8 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
         vaeFactor: data?.vaeFactor ?? 0,
         factorSource: data?.factorSource ?? "",
         resizeMode: data?.resizeMode ?? "",
+        resizeIntent: data?.resizeIntent ?? "",
+        resizeApplied: Boolean(data?.resizeApplied ?? false),
         warnings: Array.isArray(data?.warnings) ? data.warnings : [],
         executedModelFamily: data?.executedModelFamily ?? ""
       };
@@ -458,21 +472,25 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                 createBaseVNode("span", _hoisted_26, toDisplayString(backendFactorLabel.value), 1)
               ]),
               createBaseVNode("div", _hoisted_27, [
-                _cache[17] || (_cache[17] = createBaseVNode("span", { class: "tel-label" }, "Resize Domain:", -1)),
-                createBaseVNode("span", _hoisted_28, toDisplayString(resizeModeLabel.value), 1)
+                _cache[17] || (_cache[17] = createBaseVNode("span", { class: "tel-label" }, "Resize Intent:", -1)),
+                createBaseVNode("span", _hoisted_28, toDisplayString(resizeIntentLabel.value), 1)
               ]),
               createBaseVNode("div", _hoisted_29, [
-                _cache[18] || (_cache[18] = createBaseVNode("span", { class: "tel-label" }, "Reduced Latent:", -1)),
+                _cache[18] || (_cache[18] = createBaseVNode("span", { class: "tel-label" }, "Resize Domain:", -1)),
+                createBaseVNode("span", _hoisted_30, toDisplayString(resizeModeLabel.value), 1)
+              ]),
+              createBaseVNode("div", _hoisted_31, [
+                _cache[19] || (_cache[19] = createBaseVNode("span", { class: "tel-label" }, "Reduced Latent:", -1)),
                 createBaseVNode("span", {
                   class: "tel-val",
                   style: normalizeStyle(textStyle.value)
                 }, [
                   createTextVNode(toDisplayString(coercedReducedWidth.value) + " × " + toDisplayString(coercedReducedHeight.value) + " px ", 1),
-                  createBaseVNode("span", _hoisted_30, "(" + toDisplayString(wLatent.value) + " × " + toDisplayString(hLatent.value) + " blocks)", 1)
+                  createBaseVNode("span", _hoisted_32, "(" + toDisplayString(wLatent.value) + " × " + toDisplayString(hLatent.value) + " blocks)", 1)
                 ], 4)
               ]),
-              createBaseVNode("div", _hoisted_31, [
-                _cache[19] || (_cache[19] = createBaseVNode("span", { class: "tel-label" }, "Target Outputs:", -1)),
+              createBaseVNode("div", _hoisted_33, [
+                _cache[20] || (_cache[20] = createBaseVNode("span", { class: "tel-label" }, "Target Outputs:", -1)),
                 createBaseVNode("span", {
                   class: "tel-val font-semibold",
                   style: normalizeStyle(textStyle.value)
@@ -485,7 +503,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     };
   }
 });
-const LatentScalingCalculator = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-33681d53"]]);
+const LatentScalingCalculator = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-b6d212bd"]]);
 const MIN_W = 420;
 const MIN_H = 360;
 function isolateContainerEvents(container) {
@@ -593,6 +611,8 @@ app.registerExtension({
         vaeFactor: uiPayload.vae_factor?.[0],
         factorSource: uiPayload.factor_source?.[0],
         resizeMode: uiPayload.resize_mode?.[0],
+        resizeIntent: uiPayload.resize_intent?.[0],
+        resizeApplied: uiPayload.resize_applied?.[0],
         warnings: uiPayload.warnings || [],
         executedModelFamily: uiPayload.model_family?.[0]
       });
@@ -1419,7 +1439,7 @@ app.registerExtension({
 }
 
 
-.latent-calc-card[data-v-33681d53] {
+.latent-calc-card[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   background: rgba(20, 20, 22, 0.9);
@@ -1437,38 +1457,38 @@ app.registerExtension({
 }
 
 /* Accent Glowing Boundaries */
-.theme-flux1[data-v-33681d53] {
+.theme-flux1[data-v-b6d212bd] {
   border-color: rgba(0, 240, 255, 0.3);
   box-shadow: 0 4px 20px rgba(0, 240, 255, 0.06), inset 0 1px 1px rgba(255,255,255,0.05);
 }
-.theme-flux2[data-v-33681d53] {
+.theme-flux2[data-v-b6d212bd] {
   border-color: rgba(191, 0, 255, 0.3);
   box-shadow: 0 4px 20px rgba(191, 0, 255, 0.06), inset 0 1px 1px rgba(255,255,255,0.05);
 }
-.theme-sd3[data-v-33681d53] {
+.theme-sd3[data-v-b6d212bd] {
   border-color: rgba(16, 185, 129, 0.3);
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.06), inset 0 1px 1px rgba(255,255,255,0.05);
 }
-.card-header[data-v-33681d53] {
+.card-header[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   gap: 2px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 8px;
 }
-.header-main[data-v-33681d53] {
+.header-main[data-v-b6d212bd] {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.header-title[data-v-33681d53] {
+.header-title[data-v-b6d212bd] {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #f8fafc;
 }
-.header-badge[data-v-33681d53] {
+.header-badge[data-v-b6d212bd] {
   font-size: 9px;
   font-weight: 700;
   padding: 2px 6px;
@@ -1477,45 +1497,45 @@ app.registerExtension({
   transition: all 0.3s ease;
   background: rgba(255, 255, 255, 0.02);
 }
-.header-subtitle[data-v-33681d53] {
+.header-subtitle[data-v-b6d212bd] {
   margin: 0;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
 }
-.card-body[data-v-33681d53] {
+.card-body[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.control-group[data-v-33681d53] {
+.control-group[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.control-header[data-v-33681d53] {
+.control-header[data-v-b6d212bd] {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.control-label[data-v-33681d53] {
+.control-label[data-v-b6d212bd] {
   font-size: 11px;
   font-weight: 600;
   color: #94a3b8;
   letter-spacing: 0.01em;
 }
-.value-badge[data-v-33681d53] {
+.value-badge[data-v-b6d212bd] {
   font-size: 11px;
   font-family: monospace;
   font-weight: 600;
 }
-.slider-wrapper[data-v-33681d53] {
+.slider-wrapper[data-v-b6d212bd] {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 /* Styled HTML slider range */
-.styled-range[data-v-33681d53] {
+.styled-range[data-v-b6d212bd] {
   -webkit-appearance: none;
   appearance: none;
   flex: 1;
@@ -1524,7 +1544,7 @@ app.registerExtension({
   border-radius: 2px;
   outline: none;
 }
-.styled-range[data-v-33681d53]::-webkit-slider-thumb {
+.styled-range[data-v-b6d212bd]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 12px;
@@ -1535,16 +1555,16 @@ app.registerExtension({
   cursor: pointer;
   transition: transform 0.1s ease;
 }
-.styled-range[data-v-33681d53]::-webkit-slider-thumb:hover {
+.styled-range[data-v-b6d212bd]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
 }
-.theme-flux1 .styled-range[data-v-33681d53]::-webkit-slider-thumb { background: #00f0ff; box-shadow: 0 0 6px rgba(0,240,255,0.8);
+.theme-flux1 .styled-range[data-v-b6d212bd]::-webkit-slider-thumb { background: #00f0ff; box-shadow: 0 0 6px rgba(0,240,255,0.8);
 }
-.theme-flux2 .styled-range[data-v-33681d53]::-webkit-slider-thumb { background: #bf00ff; box-shadow: 0 0 6px rgba(191,0,255,0.8);
+.theme-flux2 .styled-range[data-v-b6d212bd]::-webkit-slider-thumb { background: #bf00ff; box-shadow: 0 0 6px rgba(191,0,255,0.8);
 }
-.theme-sd3 .styled-range[data-v-33681d53]::-webkit-slider-thumb { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.8);
+.theme-sd3 .styled-range[data-v-b6d212bd]::-webkit-slider-thumb { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.8);
 }
-.styled-number[data-v-33681d53] {
+.styled-number[data-v-b6d212bd] {
   width: 60px;
   background: rgba(10, 10, 12, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1556,7 +1576,7 @@ app.registerExtension({
   text-align: center;
   outline: none;
 }
-.styled-select[data-v-33681d53] {
+.styled-select[data-v-b6d212bd] {
   background: rgba(10, 10, 12, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
@@ -1568,50 +1588,50 @@ app.registerExtension({
 }
 
 /* Warnings and Badges */
-.coercion-pill[data-v-33681d53] {
+.coercion-pill[data-v-b6d212bd] {
   font-size: 9px;
   font-weight: 500;
   padding: 2px 6px;
   border-radius: 4px;
   width: max-content;
 }
-.coercion-pill.warning[data-v-33681d53] {
+.coercion-pill.warning[data-v-b6d212bd] {
   background: rgba(245, 158, 11, 0.1);
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
-.coercion-pill.info[data-v-33681d53] {
+.coercion-pill.info[data-v-b6d212bd] {
   background: rgba(59, 130, 246, 0.1);
   color: #60a5fa;
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
-.alert-box[data-v-33681d53] {
+.alert-box[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   padding: 6px 10px;
   border-radius: 8px;
   gap: 2px;
 }
-.alert-box.error[data-v-33681d53] {
+.alert-box.error[data-v-b6d212bd] {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
-.alert-box.warning-box[data-v-33681d53] {
+.alert-box.warning-box[data-v-b6d212bd] {
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
-.alert-title[data-v-33681d53] {
+.alert-title[data-v-b6d212bd] {
   font-size: 11px;
   font-weight: 600;
 }
-.alert-desc[data-v-33681d53] {
+.alert-desc[data-v-b6d212bd] {
   margin: 0;
   font-size: 10px;
   color: rgba(255,255,255,0.7);
 }
 
 /* Visualizer Layout */
-.preview-container[data-v-33681d53] {
+.preview-container[data-v-b6d212bd] {
   display: grid;
   grid-template-columns: 100px 1fr;
   gap: 12px;
@@ -1619,64 +1639,64 @@ app.registerExtension({
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 10px;
 }
-.visualizer-wrapper[data-v-33681d53] {
+.visualizer-wrapper[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
 }
-.svg-canvas[data-v-33681d53] {
+.svg-canvas[data-v-b6d212bd] {
   width: 100px;
   height: 100px;
   background: #0d0d0e;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
-.aspect-ratio-label[data-v-33681d53] {
+.aspect-ratio-label[data-v-b6d212bd] {
   font-size: 9px;
   color: rgba(255, 255, 255, 0.4);
   font-family: monospace;
 }
-.telemetry-info[data-v-33681d53] {
+.telemetry-info[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 8px;
 }
-.telemetry-row[data-v-33681d53] {
+.telemetry-row[data-v-b6d212bd] {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-.tel-label[data-v-33681d53] {
+.tel-label[data-v-b6d212bd] {
   font-size: 10px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.4);
 }
-.tel-val[data-v-33681d53] {
+.tel-val[data-v-b6d212bd] {
   font-size: 11px;
   font-family: monospace;
 }
-.tel-val.highlight[data-v-33681d53] {
+.tel-val.highlight[data-v-b6d212bd] {
   color: #fff;
 }
-.latent-block-size[data-v-33681d53] {
+.latent-block-size[data-v-b6d212bd] {
   font-size: 9px;
   color: rgba(255, 255, 255, 0.45);
   margin-left: 4px;
 }
 
 /* Micro-animations */
-.pulse-glow[data-v-33681d53] {
+.pulse-glow[data-v-b6d212bd] {
   transition: all 0.3s ease;
 }
-.theme-flux1 .pulse-glow[data-v-33681d53] {
+.theme-flux1 .pulse-glow[data-v-b6d212bd] {
   filter: drop-shadow(0 0 2px rgba(0, 240, 255, 0.4));
 }
-.theme-flux2 .pulse-glow[data-v-33681d53] {
+.theme-flux2 .pulse-glow[data-v-b6d212bd] {
   filter: drop-shadow(0 0 2px rgba(191, 0, 255, 0.4));
 }
-.theme-sd3 .pulse-glow[data-v-33681d53] {
+.theme-sd3 .pulse-glow[data-v-b6d212bd] {
   filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4));
 }`));
       document.head.appendChild(elementStyle);

@@ -137,6 +137,8 @@ comfyApp.registerExtension({
         vaeFactor: uiPayload.vae_factor?.[0],
         factorSource: uiPayload.factor_source?.[0],
         resizeMode: uiPayload.resize_mode?.[0],
+        resizeIntent: uiPayload.resize_intent?.[0],
+        resizeApplied: uiPayload.resize_applied?.[0],
         warnings: uiPayload.warnings || [],
         executedModelFamily: uiPayload.model_family?.[0]
       });

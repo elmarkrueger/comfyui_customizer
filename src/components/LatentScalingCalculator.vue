@@ -154,6 +154,10 @@
             <span class="tel-val highlight">{{ backendFactorLabel }}</span>
           </div>
           <div class="telemetry-row">
+            <span class="tel-label">Resize Intent:</span>
+            <span class="tel-val highlight">{{ resizeIntentLabel }}</span>
+          </div>
+          <div class="telemetry-row">
             <span class="tel-label">Resize Domain:</span>
             <span class="tel-val highlight">{{ resizeModeLabel }}</span>
           </div>
@@ -205,6 +209,8 @@ const telemetry = ref({
   vaeFactor: 0,
   factorSource: "",
   resizeMode: "",
+  resizeIntent: "",
+  resizeApplied: false,
   warnings: [] as string[],
   executedModelFamily: ""
 });
@@ -243,8 +249,17 @@ const backendFactorLabel = computed(() => {
 
 const resizeModeLabel = computed(() => {
   if (!telemetry.value.resizeMode) return "Pending execution...";
+  if (telemetry.value.resizeMode === "identity") return "Identity (no resize)";
   if (telemetry.value.resizeMode === "pixel") return "Pixel (decode -> resize -> encode)";
   return "Latent";
+});
+
+const resizeIntentLabel = computed(() => {
+  if (!telemetry.value.resizeIntent) return "Pending execution...";
+  if (telemetry.value.resizeIntent === "identity") return "Identity (already matched)";
+  if (telemetry.value.resizeIntent === "upscale") return "Upscale";
+  if (telemetry.value.resizeIntent === "downscale") return "Downscale";
+  return telemetry.value.resizeIntent;
 });
 
 // Math Coercions
@@ -428,6 +443,8 @@ function setTelemetry(data: any) {
     vaeFactor: data?.vaeFactor ?? 0,
     factorSource: data?.factorSource ?? "",
     resizeMode: data?.resizeMode ?? "",
+    resizeIntent: data?.resizeIntent ?? "",
+    resizeApplied: Boolean(data?.resizeApplied ?? false),
     warnings: Array.isArray(data?.warnings) ? data.warnings : [],
     executedModelFamily: data?.executedModelFamily ?? ""
   };

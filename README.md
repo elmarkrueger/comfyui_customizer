@@ -35,14 +35,17 @@ Feature overview:
 - Aspect-ratio-preserving latent scaling based on source latent dimensions
 - Connected VAE ratio metadata defines scaling factor; model-family selection is used for diagnostics
 - Round-to-nearest alignment for reduced and target sizes to keep VAE divisibility
+- For any size mismatch against reduced_image_size, prefers decode->pixel resize->encode for both downscale and upscale paths
+- Falls back to latent-space interpolation only when VAE decode/encode is unavailable, with explicit quality advisory warnings
 - Built-in dimensional collapse protection for extreme aspect ratios or undersized inputs
 - Channel-depth compatibility warnings surfaced to the frontend panel
+- Emits resize intent and resize mode telemetry so users can verify identity/downscale/upscale behavior per execution
 
 Quick usage:
 
 1. Connect a LATENT source to Duffy_LatentScalingCalculator.samples.
 2. Select model_family to match the downstream diffusion architecture for compatibility checks.
-3. Set reduced_image_size for scaled latent generation and target_size for final dimension guidance.
+3. Set reduced_image_size as the reference long-side value; inputs below or above this value are resized toward it.
 4. Queue prompt, then read calc_width and calc_height outputs or view telemetry in the node panel.
 
 ## Real-Time Shader & Grading Processor

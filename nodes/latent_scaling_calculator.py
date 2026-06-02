@@ -280,12 +280,20 @@ class DuffyLatentScalingCalculator(io.ComfyNode):
             )
 
         warnings = []
-        resize_mode = "latent"
+        resize_mode = "identity"
         input_long_side = max(w_lat * f, h_lat * f)
+        needs_resize = (w_new_lat != w_lat) or (h_new_lat != h_lat)
 
-        # Latent-space downscaling can amplify facial/detail distortions across model families.
-        # If we are reducing below source long side, prefer decode->pixel resize->encode when available.
-        prefer_pixel_space_resize = aligned_reduced < input_long_side
+        if aligned_reduced > input_long_side:
+            resize_intent = "upscale"
+        elif aligned_reduced < input_long_side:
+            resize_intent = "downscale"
+        else:
+            resize_intent = "identity"
+
+        # For any effective size mismatch, prefer decode->pixel resize->encode.
+        # This avoids latent-space quality loss on both downscales and upscales.
+        prefer_pixel_space_resize = needs_resize
 
         if prefer_pixel_space_resize:
             try:
@@ -298,16 +306,25 @@ class DuffyLatentScalingCalculator(io.ComfyNode):
                     height_latent=h_new_lat,
                 )
                 resize_mode = "pixel"
-                warnings.append(
-                    "Quality Preservation Mode: downscale detected; applied decode->pixel resize->encode to reduce facial/detail distortion."
-                )
+                if resize_intent == "upscale":
+                    warnings.append(
+                        "Quality Preservation Mode: upscale detected; applied decode->pixel resize->encode to reduce blur/detail washout."
+                    )
+                else:
+                    warnings.append(
+                        "Quality Preservation Mode: downscale detected; applied decode->pixel resize->encode to reduce facial/detail distortion."
+                    )
             except Exception as exc:
                 upscaled_latent = cls._resize_latent_direct(latent_tensor, w_new_lat, h_new_lat)
+                resize_mode = "latent"
                 warnings.append(
-                    f"Pixel-Space Resample Fallback: {exc} Using latent-space interpolation."
+                    f"Pixel-Space Resample Fallback ({resize_intent}): {exc} Using latent-space interpolation."
                 )
-        else:
+        elif needs_resize:
             upscaled_latent = cls._resize_latent_direct(latent_tensor, w_new_lat, h_new_lat)
+            resize_mode = "latent"
+        else:
+            upscaled_latent = latent_tensor
 
         # Reconstruct output dictionary preserving metadata
         output_samples = samples.copy()
@@ -352,11 +369,11 @@ class DuffyLatentScalingCalculator(io.ComfyNode):
                 f"but connected VAE reports f={f}. Using VAE factor."
             )
 
-        if aligned_reduced < input_long_side and resize_mode != "pixel":
+        if needs_resize and resize_mode == "latent":
             warnings.append(
-                f"Detail Loss Advisory: reduced_image_size={reduced_image_size} scales below input long side "
-                f"{input_long_side}px at factor f={f}. This can increase face/texture distortion. "
-                "For cleaner pixel-space upscaling, set reduced_image_size >= input long side."
+                f"Detail Loss Advisory: reduced_image_size={reduced_image_size} triggered {resize_intent} "
+                f"from input long side {input_long_side}px at factor f={f}, but pixel-space resample was unavailable. "
+                "Latent-space interpolation may reduce detail clarity."
             )
 
         # Package UI metadata for frontend consumption
@@ -366,6 +383,8 @@ class DuffyLatentScalingCalculator(io.ComfyNode):
             "vae_factor": [f],
             "factor_source": ["vae.downscale_ratio"],
             "resize_mode": [resize_mode],
+            "resize_intent": [resize_intent],
+            "resize_applied": [needs_resize],
             "input_width": [w_lat * f],
             "input_height": [h_lat * f],
             "input_channels": [channels],

@@ -185,6 +185,64 @@ class TestLatentScalingCalculator(unittest.TestCase):
         warnings = result.ui["warnings"]
         self.assertTrue(any("Quality Preservation Mode" in warning for warning in warnings))
 
+    def test_flux1_upscale_prefers_pixel_space_resample_when_codec_available(self):
+        # Upscale should also prefer pixel-space quality path when codec methods are available.
+        latent = torch.zeros((1, 16, 64, 64), dtype=torch.float32)
+        samples = {"samples": latent}
+
+        result = DuffyLatentScalingCalculator.execute(
+            samples=samples,
+            vae=MockVAEWithCodec(8, latent_channels=16),
+            reduced_image_size=1024,
+            target_size=2048,
+            model_family="Flux 1",
+        )
+
+        self.assertIsNone(result.block_execution)
+        self.assertEqual(result.ui.get("resize_mode", [None])[0], "pixel")
+        self.assertEqual(result.ui.get("resize_intent", [None])[0], "upscale")
+        self.assertTrue(result.ui.get("resize_applied", [False])[0])
+        warnings = result.ui["warnings"]
+        self.assertTrue(any("Quality Preservation Mode" in warning for warning in warnings))
+
+    def test_upscale_falls_back_to_latent_when_codec_is_missing(self):
+        latent = torch.zeros((1, 16, 64, 64), dtype=torch.float32)
+        samples = {"samples": latent}
+
+        result = DuffyLatentScalingCalculator.execute(
+            samples=samples,
+            vae=MockVAE(8),
+            reduced_image_size=1024,
+            target_size=2048,
+            model_family="Flux 1",
+        )
+
+        self.assertIsNone(result.block_execution)
+        self.assertEqual(result.ui.get("resize_mode", [None])[0], "latent")
+        self.assertEqual(result.ui.get("resize_intent", [None])[0], "upscale")
+        warnings = result.ui["warnings"]
+        self.assertTrue(any("Pixel-Space Resample Fallback" in warning for warning in warnings))
+        self.assertTrue(any("Detail Loss Advisory" in warning for warning in warnings))
+
+    def test_identity_resize_avoids_interpolation(self):
+        latent = torch.zeros((1, 16, 128, 128), dtype=torch.float32)
+        samples = {"samples": latent}
+
+        result = DuffyLatentScalingCalculator.execute(
+            samples=samples,
+            vae=MockVAE(8),
+            reduced_image_size=1024,
+            target_size=2048,
+            model_family="Flux 1",
+        )
+
+        self.assertIsNone(result.block_execution)
+        out_latent = result.args[0]["samples"]
+        self.assertEqual(out_latent.shape, latent.shape)
+        self.assertEqual(result.ui.get("resize_mode", [None])[0], "identity")
+        self.assertEqual(result.ui.get("resize_intent", [None])[0], "identity")
+        self.assertFalse(result.ui.get("resize_applied", [True])[0])
+
     def test_subpixel_collapse_error(self):
         # Test that extreme aspect ratios collapse raising a ValueError
         dummy_latent = torch.zeros((1, 16, 16, 256), dtype=torch.float32)  # 16:1 aspect ratio
