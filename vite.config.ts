@@ -14,6 +14,7 @@ export default defineConfig({
         theme_control_panel: "./src/theme_control_panel.ts",
         real_time_grading_processor: "./src/real_time_grading_processor.ts",
         latent_scaling_calculator: "./src/latent_scaling_calculator.ts",
+        ideogram_quality_selector: "./src/ideogram_quality_selector.ts",
       },
       formats: ["es"],
     },
