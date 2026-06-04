@@ -111,6 +111,13 @@
             >
               {{ ch.toUpperCase() }}
             </button>
+            <button
+              class="remove-point-btn"
+              :disabled="!canRemoveSelectedKnot"
+              @click="removeSelectedKnot"
+            >
+              Select & Remove
+            </button>
             <button class="reset-sub-btn" @click="resetCurve(activeChannel)">Reset Curve</button>
           </div>
 
@@ -157,6 +164,7 @@
                   class="curve-knot"
                   :class="{ selected: selectedKnotIndex === idx, 'endpoint': idx === 0 || idx === params.curves[activeChannel].length - 1 }"
                   @mousedown.stop="selectKnot(idx, $event)"
+                  @dblclick.stop="removeKnot(idx, $event)"
                 />
               </g>
 
@@ -613,6 +621,7 @@ export default defineComponent({
 
     const activeChannel = ref<keyof CurvesState>("rgb");
     const selectedKnotIndex = ref<number | null>(null);
+    const isDraggingKnot = ref(false);
     const hoverCoord = ref<[number, number] | null>(null);
 
     const hasImage = ref(false);
@@ -1432,6 +1441,7 @@ export default defineComponent({
     }
 
     function onCurveMouseDown(e: MouseEvent) {
+      if (e.button !== 0) return;
       e.stopPropagation();
       const coord = getMouseSvgCoord(e);
       if (!coord) return;
@@ -1455,11 +1465,13 @@ export default defineComponent({
 
       if (foundIdx !== -1) {
         selectedKnotIndex.value = foundIdx;
+        isDraggingKnot.value = true;
       } else {
         // Add new point and sort curves
         p.push(coord);
         p.sort((a, b) => a[0] - b[0]);
         selectedKnotIndex.value = p.findIndex(pt => pt[0] === coord[0] && pt[1] === coord[1]);
+        isDraggingKnot.value = true;
         onParamChange();
       }
     }
@@ -1479,7 +1491,13 @@ export default defineComponent({
       hoverCoord.value = [coord[0], valOut];
 
       if (selectedKnotIndex.value === null) return;
+      if (!isDraggingKnot.value) return;
       e.stopPropagation();
+
+      if ((e.buttons & 1) !== 1) {
+        isDraggingKnot.value = false;
+        return;
+      }
 
       const idx = selectedKnotIndex.value;
       const pt = p[idx];
@@ -1503,18 +1521,68 @@ export default defineComponent({
     function onCurveMouseUp(e: MouseEvent) {
       if (selectedKnotIndex.value !== null) {
         e.stopPropagation();
-        selectedKnotIndex.value = null;
       }
+      isDraggingKnot.value = false;
     }
 
     function onCurveMouseLeave() {
-      selectedKnotIndex.value = null;
+      isDraggingKnot.value = false;
       hoverCoord.value = null;
     }
 
     function selectKnot(idx: number, e: MouseEvent) {
+      if (e.button !== 0) return;
       e.stopPropagation();
       selectedKnotIndex.value = idx;
+      isDraggingKnot.value = true;
+    }
+
+    const canRemoveSelectedKnot = computed(() => {
+      const p = params.curves[activeChannel.value] ?? [];
+      const idx = selectedKnotIndex.value;
+      if (idx === null) return false;
+      if (p.length <= 2) return false;
+      return idx > 0 && idx < p.length - 1;
+    });
+
+    function removeKnotByIndex(idx: number): boolean {
+      const p = params.curves[activeChannel.value] ?? [[0.0, 0.0], [1.0, 1.0]];
+      if (!params.curves[activeChannel.value]) {
+        params.curves[activeChannel.value] = p;
+      }
+
+      // Keep both endpoints to preserve the 0..1 curve domain contract.
+      if (p.length <= 2 || idx <= 0 || idx >= p.length - 1) {
+        return false;
+      }
+
+      p.splice(idx, 1);
+
+      if (selectedKnotIndex.value === idx) {
+        selectedKnotIndex.value = null;
+      } else if (selectedKnotIndex.value !== null && selectedKnotIndex.value > idx) {
+        selectedKnotIndex.value -= 1;
+      }
+
+      onParamChange();
+      return true;
+    }
+
+    function removeSelectedKnot(e?: Event) {
+      e?.preventDefault();
+      e?.stopPropagation();
+
+      if (selectedKnotIndex.value === null) {
+        return;
+      }
+
+      removeKnotByIndex(selectedKnotIndex.value);
+    }
+
+    function removeKnot(idx: number, e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      removeKnotByIndex(idx);
     }
 
     function resetCurve(channel: keyof CurvesState) {
@@ -1800,7 +1868,10 @@ export default defineComponent({
       previewFitMode,
       getHistogramPath,
       getCurvePath,
+      canRemoveSelectedKnot,
       resetCurve,
+      removeSelectedKnot,
+      removeKnot,
       selectKnot,
       resetAll,
       onResetAllClick,
@@ -2166,6 +2237,27 @@ export default defineComponent({
 .reset-sub-btn:hover {
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
+}
+
+.remove-point-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.remove-point-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fecaca;
+}
+
+.remove-point-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .curve-editor-container {
