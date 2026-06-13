@@ -15,6 +15,7 @@ export default defineConfig({
         real_time_grading_processor: "./src/real_time_grading_processor.ts",
         latent_scaling_calculator: "./src/latent_scaling_calculator.ts",
         ideogram_quality_selector: "./src/ideogram_quality_selector.ts",
+        intelligent_block_swap_v2: "./src/intelligent_block_swap_v2.ts",
       },
       formats: ["es"],
     },

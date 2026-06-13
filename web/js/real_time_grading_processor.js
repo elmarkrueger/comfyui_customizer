@@ -1,6 +1,6 @@
 import { api } from "../../../scripts/api.js";
 import { app } from "../../../scripts/app.js";
-import { h as defineComponent, r as reactive, j as onMounted, k as onUnmounted, m as ref, c as computed, _ as _export_sfc, l as openBlock, e as createElementBlock, b as createBaseVNode, t as toDisplayString, n as normalizeClass, x as withDirectives, u as vShow, z as withModifiers, i as normalizeStyle, d as createCommentVNode, F as Fragment, p as renderList, f as createStaticVNode, v as vModelCheckbox, q as vModelSelect, g as createTextVNode, s as vModelText, a as createApp } from "./_plugin-vue_export-helper-Cjv3LdKZ.js";
+import { h as defineComponent, r as reactive, k as onMounted, l as onUnmounted, p as ref, c as computed, _ as _export_sfc, m as openBlock, e as createElementBlock, b as createBaseVNode, t as toDisplayString, i as normalizeClass, y as withDirectives, w as vShow, A as withModifiers, j as normalizeStyle, d as createCommentVNode, F as Fragment, q as renderList, f as createStaticVNode, v as vModelCheckbox, s as vModelSelect, g as createTextVNode, u as vModelText, a as createApp } from "./_plugin-vue_export-helper-C-igAGFE.js";
 const DEFAULT_PAYLOAD = () => ({
   curves: {
     rgb: [[0, 0], [1, 1]],
