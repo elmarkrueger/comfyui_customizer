@@ -4,6 +4,7 @@ from .real_time_grading_processor import DuffyRealTimeGradingProcessor
 from .sam3_morphological_refiner import SAM3_Morphological_Refiner_Duffy
 from .theme_control_panel import DuffyThemeControlPanel
 from .intelligent_block_swap_v2 import IntelligentBlockSwapV2
+from .model_loader import DuffyModelLoader
 
 NODE_LIST = [
     DuffyThemeControlPanel,
@@ -12,6 +13,7 @@ NODE_LIST = [
     SAM3_Morphological_Refiner_Duffy,
     DuffyIdeogramQualitySelector,
     IntelligentBlockSwapV2,
+    DuffyModelLoader,
 ]
 
 
