@@ -446,24 +446,24 @@ class DuffyRealTimeGradingProcessor(io.ComfyNode):
                 
             x = torch.clamp((1.0 - grad_opacity) * x + grad_opacity * blended, 0.0, 1.0)
 
-            # 7. Bloom (highlight threshold + downsampled Gaussian blur)
-            if bloom_intensity > 0.0:
-                bloom_threshold_scale = max(1e-6, 1.0 - bloom_threshold)
-                bloom_luminance = 0.2126 * x[:, 0:1, :, :] + 0.7152 * x[:, 1:2, :, :] + 0.0722 * x[:, 2:3, :, :]
-                bloom_mask = torch.clamp((bloom_luminance - bloom_threshold) / bloom_threshold_scale, 0.0, 1.0)
-                bloom_source = x * bloom_mask
+        # 7. Bloom (highlight threshold + downsampled Gaussian blur)
+        if bloom_intensity > 0.0:
+            bloom_threshold_scale = max(1e-6, 1.0 - bloom_threshold)
+            bloom_luminance = 0.2126 * x[:, 0:1, :, :] + 0.7152 * x[:, 1:2, :, :] + 0.0722 * x[:, 2:3, :, :]
+            bloom_mask = torch.clamp((bloom_luminance - bloom_threshold) / bloom_threshold_scale, 0.0, 1.0)
+            bloom_source = x * bloom_mask
 
-                down_h = max(1, H // 2)
-                down_w = max(1, W // 2)
-                bloom_small = F.interpolate(bloom_source, size=(down_h, down_w), mode="bilinear", align_corners=False)
+            down_h = max(1, H // 2)
+            down_w = max(1, W // 2)
+            bloom_small = F.interpolate(bloom_source, size=(down_h, down_w), mode="bilinear", align_corners=False)
 
-                # Sigma is scaled for lower-resolution blur to keep bloom spread predictable.
-                bloom_blurred = apply_separable_gaussian_blur(bloom_small, sigma=max(0.5, bloom_radius * 0.5))
-                bloom_full = F.interpolate(bloom_blurred, size=(H, W), mode="bilinear", align_corners=False)
+            # Sigma is scaled for lower-resolution blur to keep bloom spread predictable.
+            bloom_blurred = apply_separable_gaussian_blur(bloom_small, sigma=max(0.5, bloom_radius * 0.5))
+            bloom_full = F.interpolate(bloom_blurred, size=(H, W), mode="bilinear", align_corners=False)
 
-                x = torch.clamp(x + bloom_full * bloom_intensity, 0.0, 1.0)
+            x = torch.clamp(x + bloom_full * bloom_intensity, 0.0, 1.0)
             
-            # 8. Vignette Falloff
+        # 8. Vignette Falloff
         if vignette_intensity > 0.0:
             dist_v = torch.norm(grid, dim=-1, keepdim=True).permute(2, 0, 1).unsqueeze(0)  # [1, 1, H, W]
             # Match coordinate scope: distance to corner in [-1, 1] grid is sqrt(2) = 1.414.
